@@ -1,0 +1,62 @@
+{
+  "fixture_id": "rentcast-a",
+  "synthetic": true,
+  "provider_mode": "fixture",
+  "subject_address": {
+    "street": "123 Example Terrace",
+    "city": "Arlington",
+    "state": "VA",
+    "postal_code": "22201",
+    "unit": "2A"
+  },
+  "subject_attributes": {
+    "property_type": "townhouse",
+    "bedrooms": 3,
+    "square_feet": 1600
+  },
+  "provider_bathrooms": "2.5",
+  "estimate_cents": 300000,
+  "range_low_cents": 280000,
+  "range_high_cents": 320000,
+  "currency": "USD",
+  "period": "month",
+  "fetched_at": "2026-11-07T12:00:00Z",
+  "comparables": [
+    {
+      "comparable_id": "comp-1",
+      "rent_cents": 290000,
+      "currency": "USD",
+      "period": "month",
+      "observed_at": "2026-10-15T12:00:00Z",
+      "has_garage": true,
+      "description": "Synthetic comparable; features are not subject property facts."
+    },
+    {
+      "comparable_id": "comp-2",
+      "rent_cents": 300000,
+      "currency": "USD",
+      "period": "month",
+      "observed_at": "2026-10-15T12:00:00Z",
+      "has_garage": false,
+      "description": "Synthetic comparable; features are not subject property facts."
+    },
+    {
+      "comparable_id": "comp-3",
+      "rent_cents": 310000,
+      "currency": "USD",
+      "period": "month",
+      "observed_at": "2026-10-15T12:00:00Z",
+      "has_garage": false,
+      "description": "Synthetic comparable; features are not subject property facts."
+    },
+    {
+      "comparable_id": "comp-4",
+      "rent_cents": 305000,
+      "currency": "USD",
+      "period": "month",
+      "observed_at": "2026-10-15T12:00:00Z",
+      "has_garage": false,
+      "description": "Synthetic comparable; features are not subject property facts."
+    }
+  ]
+}

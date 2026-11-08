@@ -1,0 +1,26 @@
+{
+  "fixture_id": "property-a",
+  "synthetic": true,
+  "case_id": "case-a",
+  "clock": "2026-11-07T12:00:00Z",
+  "confirmed_by": "demo-human",
+  "facts": {
+    "address": {
+      "street": "123 Example Terrace",
+      "city": "Arlington",
+      "state": "VA",
+      "postal_code": "22201",
+      "unit": "2A"
+    },
+    "property_type": "townhouse",
+    "bedrooms": 3,
+    "full_bathrooms": 2,
+    "half_bathrooms": 1,
+    "square_feet": 1600,
+    "levels": 2,
+    "has_garage": false,
+    "asking_rent_cents": null,
+    "layout_description": "Level 0: kitchen, living room, and one half bathroom. Level 1: three bedrooms and two full bathrooms. No dimensions are known. No garage.",
+    "room_measurements": []
+  }
+}

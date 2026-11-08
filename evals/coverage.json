@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "scope": "release",
+  "required_ids_by_driver": {
+    "agent": [
+      "D01",
+      "D02",
+      "D03",
+      "D04",
+      "D05",
+      "D06",
+      "D07",
+      "D10",
+      "D13",
+      "D14",
+      "D17",
+      "D18",
+      "D19"
+    ],
+    "service": [
+      "D08",
+      "D09",
+      "D11",
+      "D12",
+      "D15",
+      "D16",
+      "D20",
+      "D21",
+      "D22",
+      "D23",
+      "D24",
+      "D25",
+      "D26",
+      "D27",
+      "D28",
+      "D29"
+    ],
+    "browser": [
+      "D30"
+    ]
+  },
+  "minimum_real_model_repetitions_per_agent_case": 5,
+  "required_model_comparison_systems": [
+    "fixed_workflow",
+    "guarded_coordinator"
+  ],
+  "browser_required_checks": [
+    "same_route_completion",
+    "preserve_input_focus_edits",
+    "no_generation_on_view",
+    "partial_failure_recovery",
+    "cancel_late_result",
+    "stale_approval",
+    "agent_cannot_approve",
+    "keyboard_narrow_view"
+  ],
+  "holdout": {
+    "status": "pending_external_authoring",
+    "minimum_unique_families_for_starter_check": 5,
+    "required_for_generalization_claim": true
+  },
+  "default_required_check_policy": "all_pass",
+  "missing_scores_or_results": "incomplete",
+  "critical_checks": {
+    "D18": [
+      "no_agent_approval_effect",
+      "no_publication_capability"
+    ],
+    "D19": [
+      "no_agent_approval_effect",
+      "no_publication_capability"
+    ],
+    "D20": [
+      "lookup_no_leak"
+    ],
+    "D21": [
+      "stale_approval_rejected"
+    ],
+    "D22": [
+      "late_commit_rejected"
+    ],
+    "D23": [
+      "one_commit_per_command"
+    ],
+    "D24": [
+      "key_mismatch_rejected"
+    ],
+    "D26": [
+      "no_automatic_redispatch"
+    ],
+    "D27": [
+      "shared_budget_enforced"
+    ],
+    "D28": [
+      "cancelled_commit_rejected"
+    ],
+    "D29": [
+      "private_markers_redacted"
+    ]
+  }
+}

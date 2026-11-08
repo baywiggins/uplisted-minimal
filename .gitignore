@@ -1,0 +1,24 @@
+# Runtime data and private configuration
+.env
+.env.*
+!.env.example
+.local/
+.tools/
+reports/
+*.sqlite
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+# Dependencies and generated output
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/
+coverage/
+.DS_Store

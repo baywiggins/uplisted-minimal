@@ -1,0 +1,98 @@
+{
+  "rooms": [
+    {
+      "room_id": "kitchen",
+      "kind": "kitchen",
+      "label": "Kitchen",
+      "level_index": 0,
+      "width_ft": null,
+      "length_ft": null,
+      "dimension_source_fact_ids": [],
+      "basis": "confirmed_description",
+      "measurement_id": null
+    },
+    {
+      "room_id": "living",
+      "kind": "living",
+      "label": "Living room",
+      "level_index": 0,
+      "width_ft": null,
+      "length_ft": null,
+      "dimension_source_fact_ids": [],
+      "basis": "confirmed_description",
+      "measurement_id": null
+    },
+    {
+      "room_id": "half-1",
+      "kind": "half_bathroom",
+      "label": "Half bathroom",
+      "level_index": 0,
+      "width_ft": null,
+      "length_ft": null,
+      "dimension_source_fact_ids": [],
+      "basis": "confirmed_description",
+      "measurement_id": null
+    },
+    {
+      "room_id": "bed-1",
+      "kind": "bedroom",
+      "label": "Bedroom 1",
+      "level_index": 1,
+      "width_ft": null,
+      "length_ft": null,
+      "dimension_source_fact_ids": [],
+      "basis": "confirmed_description",
+      "measurement_id": null
+    },
+    {
+      "room_id": "bed-2",
+      "kind": "bedroom",
+      "label": "Bedroom 2",
+      "level_index": 1,
+      "width_ft": null,
+      "length_ft": null,
+      "dimension_source_fact_ids": [],
+      "basis": "confirmed_description",
+      "measurement_id": null
+    },
+    {
+      "room_id": "bed-3",
+      "kind": "bedroom",
+      "label": "Bedroom 3",
+      "level_index": 1,
+      "width_ft": null,
+      "length_ft": null,
+      "dimension_source_fact_ids": [],
+      "basis": "confirmed_description",
+      "measurement_id": null
+    },
+    {
+      "room_id": "bath-1",
+      "kind": "full_bathroom",
+      "label": "Full bathroom 1",
+      "level_index": 1,
+      "width_ft": null,
+      "length_ft": null,
+      "dimension_source_fact_ids": [],
+      "basis": "confirmed_description",
+      "measurement_id": null
+    },
+    {
+      "room_id": "bath-2",
+      "kind": "full_bathroom",
+      "label": "Full bathroom 2",
+      "level_index": 1,
+      "width_ft": null,
+      "length_ft": null,
+      "dimension_source_fact_ids": [],
+      "basis": "confirmed_description",
+      "measurement_id": null
+    }
+  ],
+  "assumptions": [
+    "Rectangle placement is schematic and does not establish physical adjacency."
+  ],
+  "warnings": [
+    "Dimensions unknown; not a measured plan."
+  ]
+}

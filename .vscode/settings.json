@@ -1,0 +1,18 @@
+{
+  "terminal.integrated.env.osx": {
+    "PATH": "${workspaceFolder}/.tools/node/bin:${workspaceFolder}/.tools/bin:${env:PATH}"
+  },
+  "files.exclude": {
+    ".tools": true
+  },
+  "search.exclude": {
+    ".tools/**": true,
+    ".local/**": true,
+    "reports/**": true
+  },
+  "files.watcherExclude": {
+    ".tools/**": true,
+    ".local/**": true,
+    "**/node_modules/**": true
+  }
+}
