@@ -16,7 +16,7 @@ These are suggested priorities based on the recruiter email, not a claim about M
 
 ## Scope
 
-One local rental case in the normal UI; two synthetic cases in tests to exercise scope isolation. Monthly USD rent only. Separate project, built from zero; no imports from the production Uplisted project. One backend process, SQLite, one model-controlled coordinator, and seven tools. The UI has one route.
+One rental case in the normal UI, with authenticated access on Azure; two synthetic cases in tests to exercise scope isolation. Monthly USD rent only. Separate project, built from zero; no imports from the production Uplisted project. One backend process per Container Apps replica, PostgreSQL locally and in Azure, one model-controlled coordinator, and seven tools. The UI has one route.
 
 | Capability | What it means here | What it does not establish |
 |---|---|---|
@@ -29,15 +29,15 @@ One local rental case in the normal UI; two synthetic cases in tests to exercise
 
 **Deliberate simplification:** for the initial implementation, the model selects and orders typed listing claims; deterministic templates render factual sentences. This narrows the risk of text saying more than its citation supports. Free-form marketing prose is an extension requiring broader semantic grading. The assistant's conversational summaries still need factual evaluation. This is a smaller implementation of the earlier grounded-copy proposal, chosen for explainability.
 
-Exclude authentication providers, brokerage administration, CRM, leases, signatures, offers, payments, calendar writes, email, MLS/public publishing, document uploads, arbitrary browsing, MCP servers, vector databases, multiple agents, queues, deployment, and full CAD editing. Do not add a capability because a library makes it easy.
+Require an Azure deployment with Microsoft Foundry model access, Container Apps, PostgreSQL, Entra sign-in, managed identity, Key Vault, and telemetry. A separate Foundry Agent Service lab adds managed-agent experience. Exclude brokerage administration, CRM, leases, signatures, offers, payments, calendar writes, email, MLS/public publishing, document uploads, arbitrary browsing, MCP servers, vector databases, multiple production agents, application job queues, and full CAD editing. Do not add a capability because a library makes it easy.
 
 ## Runtime and development tools
 
-Use Python 3.12, FastAPI, Pydantic 2, standard-library SQLite, and explicit repositories/services. Use React, TypeScript in strict mode, and Vite for the frontend. Use `uv` and npm lockfiles, pytest/Ruff/mypy, Vitest/Testing Library, and Playwright. Resolve compatible library versions at bootstrap and commit exact lockfiles; this specification does not invent future patch numbers.
+Use Python 3.12, FastAPI, Pydantic 2, PostgreSQL 16 with psycopg 3 and a bounded connection pool, and explicit repositories/services. Use a local Docker Compose database and Azure Database for PostgreSQL Flexible Server, avoiding a second SQL dialect. Use React, TypeScript in strict mode, and Vite for the frontend. Use `uv` and npm lockfiles, pytest/Ruff/mypy, Vitest/Testing Library, and Playwright. Resolve compatible library versions at bootstrap and commit exact lockfiles; this specification does not invent future patch numbers.
 
-Use a small application-owned coordinator loop behind a `ModelGateway` interface. `ScriptedModelGateway` drives deterministic application tests. A separate `AnthropicModelGateway` supports real-model trials using client-executed tools. The application executes and validates each operation; the model receives tool descriptions and observations. [Official tool-use model](https://platform.claude.com/docs/en/agents-and-tools/tool-use/how-tool-use-works).
+Use a small application-owned coordinator loop behind a `ModelGateway` interface. `ScriptedModelGateway` drives deterministic application tests. An `AzureOpenAIModelGateway` supports real-model trials using the Azure OpenAI v1 Responses API and client-executed tools. The application executes and validates each operation; the model receives tool descriptions and observations. [Microsoft API guide](https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle).
 
-This Python choice carries forward the existing Uplisted backend concepts. Microsoft-hosted inference or Agent Framework can be discussed as a future adapter/runtime replacement. Do not add a second runtime merely for branding. Explain which parts would change and which contracts would stay stable.
+The user explicitly selected Azure on November 8, 2026. The main runtime is an application-owned agent hosted on Azure, not a claim of using managed Agent Service. Stage 18 separately creates a versioned Foundry prompt agent with one read-only tool and compares execution boundaries; an Agent Framework variation is optional. See [Azure architecture](06-azure-architecture.md) and [the managed-agent lab](07-foundry-agent-lab.md).
 
 ## One contained screen
 
@@ -69,7 +69,7 @@ The listing viewer lets users choose/order supported sentences and inspect the e
 
 Do not steal focus, selected views, or reading position when a result arrives. Preserve unsent chat input and unsaved edits. Show result indicators. Stop prevents future dispatch and requests cancellation; accurately explain when an external request may already have incurred cost. Structured artifacts appear only after validation and successful version checks.
 
-Human approval is an explicit control in the Review view. It calls a separate backend authority path with the exact bundle hash. The model cannot activate that control. Approval produces only a local internal snapshot.
+Human approval is an explicit control in the Review view. It calls a separate backend authority path with the exact bundle hash. The model cannot activate that control. Approval produces only an internal snapshot in PostgreSQL; deploying the application does not publish property listings.
 
 ## Seven runtime tools
 
@@ -85,9 +85,9 @@ The model may select tools, propose their arguments, ask questions, and explain 
 
 ## Completion definition
 
-The project is interview-ready when the single-screen flow works from a clean checkout; the critical deterministic tests pass; a real model has been evaluated on reproducible tasks in the harness, with all actual failures retained; a fixed-workflow comparison is recorded; and you can show one failure, mitigation, and independent regression (or a clearly labeled injected fault if no model failure was observed). A fixture-only application is a useful milestone but is not evidence of model reliability.
+The project is interview-ready when the single-screen flow works from a clean checkout and an authenticated Azure HTTPS deployment; the critical deterministic tests pass; a real model has been evaluated on reproducible tasks in the harness, with all actual failures retained; a fixed-workflow comparison is recorded; and you can show one failure, mitigation, and independent regression (or a clearly labeled injected fault if no model failure was observed). A fixture-only application is a useful milestone but is not evidence of model reliability.
 
-All benchmark values start as **not measured**. Original Uplisted test results and saved prompt-evaluation scores belong to the earlier project and cannot be reported as results for this one.
+Required additional evidence includes Azure workload identity/model access, durable state across restart, revision-overlap ownership tests, a correlated trace, a cost/cleanup runbook, and the managed-agent lab. Local-only completion is an intermediate milestone. All benchmark values start as **not measured**. Original Uplisted test results and saved prompt-evaluation scores belong to the earlier project and cannot be reported as results for this one.
 
 ## Approaches and tradeoffs
 
@@ -95,4 +95,4 @@ All benchmark values start as **not measured**. Original Uplisted test results a
 - **Small tool-choosing coordinator:** chosen for this draft; enough model agency to study tool selection while keeping execution boundaries inspectable.
 - **Broad autonomous/multi-agent platform:** additional authority, coordination, and evaluation burden with little benefit to this project's task. Outside scope.
 
-The user selected the single-screen experience and asked for a complete Copilot handoff. Stack, limits, controlled templates, and serial execution are explicit recommendations in this draft, not claims that the user previously selected every technical detail.
+The user selected the single-screen experience, a complete Copilot handoff, and now an Azure-hosted prototype with Azure agent learning. Stack, limits, controlled templates, and serial execution are explicit recommendations in this draft, not claims that the user previously selected every technical detail.

@@ -1,6 +1,6 @@
 # Build progress
 
-The folder and project-local prerequisites are prepared. No application stages have been implemented or checked by the handoff author. Copilot updates it using observed results, never assumptions.
+The folder and existing project-local runtimes are prepared. The target is now Azure; Docker and Azure CLI/account readiness are tracked separately in SETUP-STATUS and AZURE-OWNER-SETUP. No application stages have been implemented or checked by the handoff author. Copilot updates it using observed results, never assumptions.
 
 | Stage | Status | Actual verification | Remaining issue |
 |---|---|---|---|
@@ -16,9 +16,13 @@ The folder and project-local prerequisites are prepared. No application stages h
 | 10 | Not started | Not run | — |
 | 11 | Not started | Not run | — |
 | 12 | Not started | Not run | — |
-| 13 | Not started | Not run | Real-model access and explicit spend configuration needed later |
-| 14 | Not started | Not run | Real measurements and fresh holdout not yet available |
-| 15 | Not started | Not run | — |
+| 13 | Not started | Not run | Azure account/model deployment and explicit spend inputs needed |
+| 14 | Not started | Not run | Real comparison and fresh holdout not yet measured |
+| 15 | Not started | Not run | Cloud identity and ownership checks not implemented |
+| 16 | Not started | Not run | Infrastructure/cost/permission plan not implemented |
+| 17 | Not started | Not run | No Azure application deployed |
+| 18 | Not started | Not run | No managed Foundry agent created |
+| 19 | Not started | Not run | Final local/cloud rehearsal pending |
 
 For each completed stage append: date, commit, files changed, exact commands, actual results, limits/unrun checks, decision changes, and the interview lesson. If only offline checks passed, do not mark live checks passed. Keep failed evaluation artifacts and explain their disposition.
 

@@ -1,4 +1,4 @@
-# Learn the implementation in six sections
+# Learn the implementation in eight sections
 
 You do not need to absorb the entire specification at once. Read the current section, let Copilot implement one stage, then inspect its learning checkpoint before moving on.
 
@@ -9,7 +9,9 @@ You do not need to absorb the entire specification at once. Read the current sec
 | [3. Grounded artifacts](sections/03-grounding.md) | 07–08 | Schematics, photo references, and supported listing facts |
 | [4. Agent authority](sections/04-agent-authority.md) | 09–11 | Tool choice, budgets, cancellation, and human approval |
 | [5. Evaluations](sections/05-evaluations.md) | 12–14 | Independent graders, real-model trials, comparison, and failure analysis |
-| [6. Ownership](sections/06-ownership.md) | 15 | Clean-checkout verification and your interview explanation |
+| [6. Azure deployment](sections/06-azure-deployment.md) | 15–17 | Entra identity, private PostgreSQL, managed identity, IaC, telemetry and deployment |
+| [7. Managed agents](sections/07-managed-agents.md) | 18 | Foundry Agent Service versus your application-owned coordinator |
+| [8. Ownership](sections/08-ownership.md) | 19 | Clean-checkout/Azure verification and your interview explanation |
 
 ## What Copilot does at every stage
 

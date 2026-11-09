@@ -22,3 +22,8 @@ web/test-results/
 web/playwright-report/
 coverage/
 .DS_Store
+
+# Private Azure local configuration; example parameters remain tracked.
+.azure/
+infra/*.parameters.local.json
+infra/*.local.bicepparam

@@ -1,6 +1,8 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "expected_stage_count": 19,
   "workflow": "one_stage_then_explain_and_stop",
+  "deployment_target": "azure",
   "stages": [
     {
       "stage": "01",
@@ -88,9 +90,9 @@
     },
     {
       "stage": "13",
-      "title": "Real model adapter and optional live RentCast",
+      "title": "Azure OpenAI model integration and model-resource setup",
       "section": "learning/sections/05-evaluations.md",
-      "prompt": "prompts/13-real-model-adapter-and-optional-live-rentcast.md",
+      "prompt": "prompts/13-azure-openai-model-integration-and-model-resource-setup.md",
       "checkpoint": "learning/checkpoints/13.md"
     },
     {
@@ -102,10 +104,38 @@
     },
     {
       "stage": "15",
-      "title": "Clean-checkout verification and rehearsal",
-      "section": "learning/sections/06-ownership.md",
-      "prompt": "prompts/15-clean-checkout-verification-and-rehearsal.md",
+      "title": "Azure identity, persistent sessions and process ownership",
+      "section": "learning/sections/06-azure-deployment.md",
+      "prompt": "prompts/15-azure-identity-persistent-sessions-and-process-ownership.md",
       "checkpoint": "learning/checkpoints/15.md"
+    },
+    {
+      "stage": "16",
+      "title": "Azure infrastructure, image, telemetry and deployment runbook",
+      "section": "learning/sections/06-azure-deployment.md",
+      "prompt": "prompts/16-azure-infrastructure-image-telemetry-and-deployment-runbook.md",
+      "checkpoint": "learning/checkpoints/16.md"
+    },
+    {
+      "stage": "17",
+      "title": "Deploy and verify the Azure prototype",
+      "section": "learning/sections/06-azure-deployment.md",
+      "prompt": "prompts/17-deploy-and-verify-the-azure-prototype.md",
+      "checkpoint": "learning/checkpoints/17.md"
+    },
+    {
+      "stage": "18",
+      "title": "Build and compare a managed Foundry agent",
+      "section": "learning/sections/07-managed-agents.md",
+      "prompt": "prompts/18-build-and-compare-a-managed-foundry-agent.md",
+      "checkpoint": "learning/checkpoints/18.md"
+    },
+    {
+      "stage": "19",
+      "title": "Clean-checkout verification and rehearsal",
+      "section": "learning/sections/08-ownership.md",
+      "prompt": "prompts/19-clean-checkout-verification-and-rehearsal.md",
+      "checkpoint": "learning/checkpoints/19.md"
     }
   ]
 }

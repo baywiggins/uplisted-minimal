@@ -11,15 +11,17 @@ This is a rehearsal draft, not a script to claim unfinished work. Replace result
 | 3. Agent/tool design | Why an agent; when a fixed workflow suffices; relevant tool selection; truthful failures | 05–10 |
 | 4. System reliability | Transactions, cache keys, cancellation, retries, shared budgets, crash behavior | 03, 05, 10–11 |
 | 5. Grounding | Subject facts versus comps versus assumptions; schematic versus measured floorplan | 02, 07–08 |
-| 6. Communication and ownership | Tradeoffs, actual failures, measured change, limitations, your work with Copilot | 14–15 |
+| 6. Azure engineering | Entra versus managed identity, private PostgreSQL, revision ownership, telemetry, deployment and cleanup | 13, 15–17 |
+| 7. Managed-agent understanding | Compare your coordinator with a real Foundry Agent Service prompt agent | 18 |
+| 8. Communication and ownership | Tradeoffs, actual failures, measured change, limitations, your work with Copilot | 14, 19 |
 
-UI polish supports these explanations. Additional agents, extra tools, cloud infrastructure, and elaborate styling are lower priority unless the existing evidence is already strong. You should be able to explain every critical path without asking a coding assistant what it does.
+UI polish supports these explanations. Azure deployment and the bounded managed-agent lab are required learning milestones. Extra production agents, extra tools, and elaborate styling remain lower priority than evidence. You should be able to explain every critical path without asking a coding assistant what it does.
 
 ## A 45-second opening
 
 Adapt after implementation:
 
-> “Uplisted helps prepare a rental listing from confirmed property facts. I built a smaller single-screen version so I could study agent reliability. The assistant can retrieve rent evidence, generate a schematic and photo checklist, and prepare grounded listing materials. It chooses among seven tools, but ordinary server code controls state changes and approval. My main question was: does it finish the user's actual task without inventing facts or exceeding its authority? I evaluated persisted outcomes, tool behavior, and failure recovery, then compared the agent with a fixed workflow.”
+> “Uplisted helps prepare a rental listing from confirmed property facts. I built a smaller single-screen version on Azure so I could study agent reliability, identity and deployment behavior. The assistant can retrieve rent evidence, generate a schematic and photo checklist, and prepare grounded listing materials. It chooses among seven tools, but ordinary server code controls state changes and approval. My main question was: does it finish the user's actual task without inventing facts or exceeding its authority? I evaluated persisted outcomes, tool behavior, and failure recovery, then compared the agent with a fixed workflow.”
 
 If only fixtures are available, explicitly replace the integration sentence with “The demo replays labeled evidence; real provider integration is not yet verified.” If real-model evaluation is missing, say the current result establishes application behavior only.
 
@@ -37,12 +39,14 @@ Draw this or show it as a small slide:
 
 ```mermaid
 flowchart LR
-    UI[One-screen assistant] --> API[Scoped local API]
+    UI[One-screen assistant] --> E[Entra-protected Azure ingress]
+    E --> API[FastAPI on Container Apps]
     API --> C[Coordinator]
     C --> D[Typed dispatcher and shared budget]
     D --> T[Seven tools]
     T --> V[Domain validation and version checks]
-    V --> DB[(Immutable state and events)]
+    T --> AZ[Azure OpenAI deployment]
+    V --> DB[(PostgreSQL state, ownership and events)]
     DB --> C
     UI --> H[Human approval endpoint]
     H --> DB
@@ -84,7 +88,7 @@ Keep the failing trace. If the only failure is deliberately fault-injected, call
 
 ### 9:00–10:00 — Tradeoffs and next step
 
-Explain three deliberate limits: local single-process state, controlled listing grammar, synthetic evaluation distribution. Scaling would require stronger identity/tenant isolation, a durable job system, transactional store/worker coordination, richer telemetry, and real usage sampling. Broader prose requires semantic evaluation and human review, not just a larger prompt.
+Explain three deliberate limits: interrupted in-flight work rather than automatic durable resumption, controlled listing grammar, and synthetic evaluation distribution. Show the actual Entra/managed-identity boundary, PostgreSQL persistence, lease/fence revision test and one correlated Azure trace. Further scaling would require a durable job system, broader tenancy testing and representative real usage evaluation. Broader prose requires semantic evaluation and human review, not just a larger prompt.
 
 Close with the next experiment your evidence supports: perhaps improve clarification, reduce unnecessary calls, test fresh properties, or compare a second model. Avoid listing ten unmeasured features.
 
@@ -165,11 +169,19 @@ A five-minute demo should use only the first, second, fourth, sixth, and report 
 
 **How would you scale it?**
 
-“First strengthen identity and authorization, move state to a suitable transactional service, introduce durable queued execution and worker ownership, and retain version-bound commits/idempotency. Add representative production evaluation and monitoring. I'd avoid replacing the authority model just because execution becomes distributed.”
+“The prototype already uses Entra, managed identity, PostgreSQL and fenced run ownership. Next I would introduce durable queued execution, validate multi-replica admission and broader tenancy, and retain version-bound commits/idempotency. Add representative production evaluation and monitoring. I'd avoid replacing the authority model just because execution becomes distributed.”
 
-**What would change for a Microsoft/Azure runtime?**
+**What did Azure provide, and what did you build?**
 
-“The model adapter and deployment/identity integration would change. The typed tool contracts, database outcome tests, approval semantics, and evaluation cases should stay stable. I would verify the selected runtime's retry, persistence, and tool-permission behavior rather than assume a framework provides the same guarantees.”
+“Azure hosts the model and app and provides identity, database hosting and telemetry. My code owns the main agent loop, tool permission checks, budgets, leases, validations and exact-version approval. I also created a separate managed Foundry agent with one read-only tool to learn which responsibilities move to the service. The Python function still executed in my client.”
+
+**Why a lease if there is only one replica?**
+
+“During deployment, the old and new revisions can overlap. The database owner/fence check prevents both from committing a case run. Startup only interrupts an expired lease; it does not cancel a healthy old process.”
+
+**What is the difference between Entra sign-in and managed identity?**
+
+“Entra sign-in identifies the human; case membership decides what they may do. Managed identity identifies the workload when it calls Azure services. Neither gives the acting model permission to approve.”
 
 **How did you use Copilot?**
 
@@ -192,4 +204,11 @@ Read the recruiter-provided [Anthropic eval article](https://www.anthropic.com/r
 
 Use [Microsoft Foundry's agent evaluator categories](https://learn.microsoft.com/en-us/azure/foundry/concepts/evaluation-evaluators/agent-evaluators) to practice distinguishing end-to-end task results from tool-use/process results. You do not have to adopt its hosted services to explain those distinctions.
 
-For implementation, use [Anthropic client tool execution](https://platform.claude.com/docs/en/agents-and-tools/tool-use/how-tool-use-works), [RentCast valuation semantics](https://developers.rentcast.io/reference/property-valuation), [GitHub repository instructions](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions), [Vite setup](https://vite.dev/guide/), [Node release status](https://nodejs.org/en/about/previous-releases), and [uv locking/syncing](https://docs.astral.sh/uv/concepts/projects/sync/). These links support specific implementation concepts; they do not validate your project or its future scores.
+For implementation, use [Azure OpenAI v1](https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle), [Foundry function tools](https://learn.microsoft.com/en-us/azure/foundry/agents/how-to/tools/function-calling), [RentCast valuation semantics](https://developers.rentcast.io/reference/property-valuation), [GitHub repository instructions](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions), [Vite setup](https://vite.dev/guide/), [Node release status](https://nodejs.org/en/about/previous-releases), and [uv locking/syncing](https://docs.astral.sh/uv/concepts/projects/sync/). These links support specific implementation concepts; they do not validate your project or its future scores.
+
+
+## Azure evidence to add to the demonstration
+
+After actual implementation, open the authenticated HTTPS app and identify the deployed revision/image. Show one Azure model call in the correlated trace, one DB-backed stale/expired-owner rejection, and the difference between the human reviewer and managed workload identity. Then show the small Foundry Agent Service comparison and explain that it is a separate experiment, not a second production agent.
+
+Report [actual region/model deployment], [identity scope], [cloud acceptance outcomes], [known/unknown spend], and [cleanup status]. Leave those values unfilled until measured. If Azure access was unavailable, state that the cloud milestone is incomplete; do not present the local backup as a deployment.

@@ -1,6 +1,6 @@
 # Prepared folder: setup verification
 
-Checked at 2026-11-08T03:10:30.847163+00:00.
+Checked at 2026-11-09T01:52:25.771399+00:00.
 
 These checks cover the prepared folder and local prerequisites, not the application or model performance.
 
@@ -11,6 +11,8 @@ These checks cover the prepared folder and local prerequisites, not the applicat
 | node | PASS | v24.22.2 |
 | npm | PASS | 11.19.1 |
 | python | PASS | Python 3.12.15 |
+| docker | PASS | Docker version 29.1.3, build f52814d |
+| Docker Compose | PASS | 2.40.3-desktop.1 |
 | standalone Git repository | PASS | local repository; no remote required |
 | COPILOT-START.md | PASS | file present |
 | AGENTS.md | PASS | file present |
@@ -19,8 +21,11 @@ These checks cover the prepared folder and local prerequisites, not the applicat
 | docs/03-build-plan.md | PASS | file present |
 | learning/stages.json | PASS | file present |
 | evals/dev/scenarios.jsonl | PASS | file present |
+| evals/cloud/scenarios.jsonl | PASS | file present |
+| docs/06-azure-architecture.md | PASS | file present |
+| docs/07-foundry-agent-lab.md | PASS | file present |
 | uplisted-interview.code-workspace | PASS | file present |
-| learning map | PASS | 15 ordered stages with existing sections/prompts/checkpoints |
+| learning map | PASS | 19 ordered stages with existing sections/prompts/checkpoints |
 | VS Code | PASS | installed |
 | Copilot extension | PASS | installed; account sign-in not checked |
 
@@ -29,8 +34,12 @@ These checks cover the prepared folder and local prerequisites, not the applicat
 - Node 24 is installed under ignored `.tools/`; global Node settings are unchanged.
 - Python 3.12 is linked to the existing uv-managed installation.
 - Copilot account sign-in and VS Code workspace trust remain editor-controlled; no account or approval setting was changed.
-- Application dependencies, source code, lockfiles, and tests are intentionally left to Copilot Stage 01 onward.
+- Application dependencies, source code, lockfiles, database/image setup and tests are left to Copilot Stage 01 onward.
+- Docker/Compose version checks do not prove the daemon is running or a PostgreSQL image has been pulled.
+- Azure CLI: not installed; required before Stage 13.
+- Azure tenant/subscription/model/permissions/budget/reviewer inputs are not configured; see AZURE-OWNER-SETUP.md.
+- No Azure resource was created or deployed by this instruction update.
 - No model/RentCast credentials were read or configured, and no paid provider was invoked.
-- All 15 application stages remain not started until Copilot implements and verifies them.
+- All 19 application stages remain not started until Copilot implements and verifies them.
 
-Rerun: `./scripts/with-tools.sh python scripts/doctor.py`.
+Rerun local checks: `./scripts/with-tools.sh python scripts/doctor.py`. Require Azure CLI too: add `--azure`.

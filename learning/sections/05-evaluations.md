@@ -9,13 +9,13 @@ Application tests establish specified software behavior. Real-model trials measu
 ## How the stages build on each other
 
 - 12: Build isolated trials, independent graders, and failure-detecting harness tests.
-- 13: Add the real model; distinguish frozen evidence from optional live RentCast.
+- 13: Add the real Azure OpenAI model; distinguish frozen evidence from optional live RentCast.
 - 14: Compare fairly, investigate failures, and evaluate fresh holdout cases separately.
 
 | Stage | Copy-ready implementation prompt | Record your understanding |
 |---|---|---|
 | 12 | [Independent evaluation harness and grader self-tests](../../prompts/12-independent-evaluation-harness-and-grader-self-tests.md) | [Learning checkpoint](../checkpoints/12.md) |
-| 13 | [Real model adapter and optional live RentCast](../../prompts/13-real-model-adapter-and-optional-live-rentcast.md) | [Learning checkpoint](../checkpoints/13.md) |
+| 13 | [Azure OpenAI model integration and model-resource setup](../../prompts/13-azure-openai-model-integration-and-model-resource-setup.md) | [Learning checkpoint](../checkpoints/13.md) |
 | 14 | [Baseline comparison, failure analysis, and frozen holdout](../../prompts/14-baseline-comparison-failure-analysis-and-frozen-holdout.md) | [Learning checkpoint](../checkpoints/14.md) |
 
 ## Trace this after implementation

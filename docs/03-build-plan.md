@@ -4,15 +4,17 @@
 
 **Goal:** Build an inspectable rental-listing assistant and produce trustworthy evidence about task completion, tool use, and risk.
 
-**Architecture:** One React workspace calls a local FastAPI backend. A small coordinator proposes actions through seven typed tools; deterministic services enforce scope, versions, budgets, validation, and human approval. SQLite stores immutable state and ordered events.
+**Architecture:** One React workspace calls FastAPI locally and on Azure Container Apps. A small coordinator proposes actions through seven typed tools; deterministic services enforce scope, versions, budgets, validation, and human approval. PostgreSQL stores immutable state, run ownership, ordered events and approvals; Azure OpenAI supplies the model.
 
-**Tech stack:** Python 3.12, FastAPI/Pydantic 2, SQLite, React/TypeScript/Vite, uv/npm, pytest/Ruff/mypy, Vitest/Testing Library/Playwright. The real-model adapter is required for final model evaluation; live RentCast is optional. Both remain isolated and disabled until explicitly configured.
+**Tech stack:** Python 3.12, FastAPI/Pydantic 2, PostgreSQL 16/psycopg 3, Docker Compose, React/TypeScript/Vite, uv/npm, pytest/Ruff/mypy, Vitest/Testing Library/Playwright, Azure CLI/Bicep, Container Apps, Foundry/Azure OpenAI and Entra ID. The real-model adapter is required for final model evaluation; live RentCast is optional. Both remain isolated and disabled until explicitly configured.
 
-**Spec:** `docs/01-product-brief.md`, `docs/02-contracts.md`, and `docs/04-evaluation-plan.md` travel with this plan.
+**Spec:** `docs/01-product-brief.md`, `docs/02-contracts.md`, and `docs/04-evaluation-plan.md`, `docs/06-azure-architecture.md` and `docs/07-foundry-agent-lab.md` travel with this plan.
 
 ## Global constraints
 
 - Single route and current case; persistent assistant; no wizard or dashboard.
+- Required Azure HTTPS deployment and managed-agent learning lab; local-only is an intermediate milestone.
+- PostgreSQL locally/in Azure; Entra-protected cloud access; durable owner/lease/fence checks during revision overlap.
 - One coordinator, seven tools, serial tools, one active run per case.
 - Fixtures/scripted mode by default; live provider/model mode separately configured and labeled.
 - Confirmed facts, external evidence, and generated assumptions stay separate.
@@ -47,13 +49,13 @@ At the gate, run the stage's commands and inspect actual output. Keep `docs/BUIL
 
 **Produces:** `create_app() -> FastAPI`, validated `Settings`, `/api/health`, the standard commands from contracts §1, and a frontend that renders one empty workspace route. No tool/provider functionality yet.
 
-- [ ] Inspect the empty target and copied docs; initialize Git if absent. Verify Python 3.12, Node 24, uv/npm versions. If tools are missing, report the exact prerequisite instead of executing an unrelated installer.
-- [ ] Resolve compatible stable dependency releases. Use FastAPI/Pydantic 2/httpx/uvicorn and the named test tools; avoid extra runtime frameworks. Commit lockfiles and record exact installed versions. Use current official docs for syntax.
-- [ ] Create fixture-safe configuration: `MODEL_MODE=scripted`, `RENTCAST_MODE=fixture`, loopback origin, ignored local database, empty live secrets, and no provider work during import/startup. Tests assert invalid mode rejection and safe defaults. Use a global test guard that blocks external sockets; HTTP adapters use injected mock transports.
+- [ ] Inspect the empty target and copied docs; initialize Git if absent. Verify Python 3.12, Node 24, uv/npm and Docker/Compose versions. The prepared runtime wrapper remains in use. If tools are missing, report the exact prerequisite instead of executing an unrelated installer.
+- [ ] Resolve compatible stable dependency releases. Use FastAPI/Pydantic 2/httpx/uvicorn and the named test tools; prepare compose.yaml with a pinned PostgreSQL 16 image, loopback port 5433, health check and local-only credentials from the example; avoid extra runtime frameworks. Commit lockfiles and record exact installed versions. Use current official docs for syntax.
+- [ ] Create fixture-safe configuration: `MODEL_MODE=scripted`, `RENTCAST_MODE=fixture`, loopback origin, local PostgreSQL connection, APP_ENV=local/AUTH_MODE=local_demo, empty Azure identifiers/live secrets, and no provider work during import/startup. Tests assert invalid mode rejection and safe defaults. Use a global test guard that blocks external sockets and allows only the configured loopback test database; HTTP adapters use injected mock transports. Container image/dependency downloads are setup, not test execution.
 - [ ] Implement `create_app` with readiness route and minimal frontend scripts. Health test asserts HTTP 200 and no credentials/machine paths. Do not add chat mock interactions that pretend to be a real agent.
 - [ ] Write start/install/check commands in README; run from a fresh environment using lockfiles. A separate terminal is required for each dev server.
 
-**Gate:** `uv run pytest -q tests/unit/test_config.py tests/integration/test_health.py`; `uv run ruff check .`; `uv run mypy src`; `npm --prefix web run check`; `npm --prefix web run build`. All must exit 0; inspect the page on the one route. Do not claim other features exist.
+**Gate:** `docker compose config --quiet`; start the database and verify its health without exposing it beyond loopback; `uv run pytest -q tests/unit/test_config.py tests/integration/test_health.py`; `uv run ruff check .`; `uv run mypy src`; `npm --prefix web run check`; `npm --prefix web run build`. All must exit 0; inspect the page on the one route. Do not claim other features exist.
 
 **Interview focus:** Reproducible configuration and explicit simulation prevent a polished demo from hiding missing integrations.
 
@@ -77,20 +79,20 @@ At the gate, run the stage's commands and inspect actual output. Keep `docs/BUIL
 
 ## Stage 03 — Versioned state, concurrency, and idempotency
 
-**Files:** create `state/db.py`, `state/repository.py`, `cli.py`; `tests/integration/test_repository.py`, `test_idempotency.py`, `test_freshness.py`; define minimal run/event records needed by later stages.
+**Files:** create `state/db.py`, `state/repository.py`, `state/run_ownership.py`, `state/migrations/001_initial.sql`, `cli.py`; `tests/integration/test_repository.py`, `test_idempotency.py`, `test_freshness.py`; define minimal run/event records needed by later stages.
 
 **Consumes:** Stage 02 models and hashes. Use all repository signatures in contracts §3.
 
-**Produces:** v1 SQLite schema; repository methods; `is_current(ref, case_id, clock) -> FreshnessResult`; idempotent `init-demo`; immutable property/artifact storage and target-head acceptance gate.
+**Produces:** v1 PostgreSQL schema; repository methods; `is_current(ref, case_id, clock) -> FreshnessResult`; idempotent `init-demo`; immutable property/artifact storage and target-head acceptance gate.
 
-- [ ] Build short parameterized transactions, enable foreign keys and WAL, and store a schema version. Use an injected clock and temporary database in tests.
+- [ ] Build short parameterized PostgreSQL transactions and numbered migrations with foreign keys and scoped unique indexes. Use psycopg 3 AsyncConnectionPool and async runtime repository methods with a consistent lock order; keep arithmetic/hashing synchronous. Test against a disposable PostgreSQL database/schema, with cleanup restricted to test namespaces; use an injected clock. Add run owner/fence/lease fields and transactional single-active-run admission from contracts §10.
 - [ ] Test and implement case-scoped retrieval; unknown/cross-case refs have equivalent safe results. Seed Case B with a unique private marker and assert it does not leak.
 - [ ] Implement monotonic property revisions and per-kind artifact heads. A property edit invalidates all derived artifacts; artifact edits invalidate descendants through exact refs. Test dependency cycles are rejected or impossible by construction.
-- [ ] Implement `accept_artifact` atomic checks for property/dependencies/target head and active, uncancelled run. Human edits use a separately authorized path through the same validation/version checks; they do not need an active agent run. Test stale source, changed destination head, and cancellation using controlled transaction ordering.
+- [ ] Implement `accept_artifact` atomic checks for property/dependencies/target head and active, uncancelled run with current unexpired owner/fence. Human edits use a separately authorized path through the same validation/version checks; they do not need an active agent run. Test stale source, changed destination head, and cancellation using controlled transaction ordering.
 - [ ] Implement operation records before dispatch and atomic local completion receipts. Same key/same hash returns original result, different input or actor conflicts, pending returns pending. Test at most one effect from concurrent duplicate requests.
-- [ ] Implement `init-demo` without overwriting existing state, and explicit local reset. Restart marks previously active work interrupted; it does not replay calls.
+- [ ] Implement `init-demo` without overwriting existing state, and explicit local reset. Recovery interrupts only expired leases, not every active row. Test that a second process cannot interrupt a healthy owner; it does not replay calls.
 
-**Gate:** `uv run pytest -q tests/integration/test_repository.py tests/integration/test_idempotency.py tests/integration/test_freshness.py`; lint/type checks. Use two repository connections for race tests, not only mocks.
+**Gate:** `uv run pytest -q tests/integration/test_repository.py tests/integration/test_idempotency.py tests/integration/test_freshness.py`; lint/type checks. Use two PostgreSQL repository connections for race tests, not only mocks. Keep fixture/model tests externally offline.
 
 **Interview focus:** Be able to draw the transaction boundary and explain why an idempotency key alone does not solve stale writes or remote billing.
 
@@ -192,7 +194,7 @@ At the gate, run the stage's commands and inspect actual output. Keep `docs/BUIL
 **Produces:** `ToolCall`, `ToolRegistry`, `dispatch_tool(ctx, call, budget) -> ToolResult`; durable ordered events and safe public projections.
 
 - [ ] Generate tool input schemas from Pydantic, not separately maintained handwritten schemas. Register only the seven tools. Test injected `actor_id`, `case_id`, `role`, arbitrary URL, replacement facts, extra fields, and unknown tools are rejected.
-- [ ] Execute a shared order: allowlist → parse → scoped refs → budget reservation → domain execution → output checks → acceptance transaction → safe result. Record proposed, blocked, started, and committed separately.
+- [ ] Execute a shared order: count server-assigned tool attempt → allowlist → parse → scoped refs → monetary/provider reservation → domain execution → output checks → acceptance transaction → safe result. Test unknown/malformed and repeated provider-call-ID proposals consume allowances; replaying the same server attempt does not double-charge. Record proposed, blocked, started, and committed separately.
 - [ ] Bind command keys to server run/call/operation IDs; ledger replay is idempotent. Every artifact writer must use the shared acceptance gate.
 - [ ] Add injection tests using untrusted provider text. Assert no registered approval/publish/HTTP/shell tool exists and no forbidden database event occurs. Count attempted forbidden proposals, not just prevented effects.
 - [ ] Redact provider headers, credentials, session tokens and seeded private contact markers. Export allowlisted event fields; do not log private model reasoning.
@@ -203,20 +205,20 @@ At the gate, run the stage's commands and inspect actual output. Keep `docs/BUIL
 
 ## Stage 10 — Coordinator, budgets, cancellation, and fixed baseline
 
-**Files:** create `agent/coordinator.py`, `agent/budget.py`, `agent/prompts.py`, `agent/baseline.py`; extend scripted gateway; `tests/integration/test_coordinator.py`, `test_budget.py`, `test_cancellation.py`, `test_baseline.py`.
+**Files:** create `agent/coordinator.py`, `agent/budget.py`, `agent/prompts.py`, `agent/baseline.py`; extend scripted gateway; `tests/integration/test_coordinator.py`, `test_budget.py`, `test_cancellation.py`, `test_baseline.py`, `test_run_ownership.py`.
 
 **Consumes:** dispatcher, repositories, model protocol, exact limits/run states in contracts §6.
 
 **Produces:** `Coordinator.run(ctx, request) -> RunOutcome`; `RunBudget.reserve_model(...)`, `reserve_tool(...)`, `record_usage(...)`, `check_deadline()`; `FixedWorkflow.run(ctx, request)`. Model reservations include helper and repair calls.
 
 - [ ] Use scripted model turns to test read → tool → observation → final flow and an appropriate clarification. A model final message cannot create completion artifacts. Handle malformed/unknown calls and tool failures explicitly.
-- [ ] Enforce one active run per case, serial tool execution, call-ID correspondence, max attempts, deadline, and at most one repair. Test a helper consumes the last model allowance; further repair/coordinator calls are blocked.
+- [ ] Enforce one active run per case, serial tool execution, call-ID correspondence, per-run opaque provider continuation state, max attempts, deadline, and at most one repair. Test a helper consumes the last model allowance; further repair/coordinator calls are blocked.
 - [ ] Cancellation sets a durable flag, halts further dispatch, and blocks late acceptance. Barrier tests cover cancel before dispatch, while provider in flight, and after one artifact committed. Retain successful earlier artifacts.
-- [ ] Restart marks work interrupted without automatic paid replay. Usage/cost may be unknown. Disable SDK retries later; gateway protocol makes attempts visible now.
+- [ ] Renew the 30-second DB lease every 5 seconds during async model/tool work. Lease loss stops dispatch and commits; expired-run reconciliation marks only expired owners interrupted without automatic paid replay. Usage/cost may be unknown. Disable SDK retries later; gateway protocol makes attempts visible now.
 - [ ] Implement a fair fixed baseline supporting narrow task categories. It shares tools, helper settings and guardrails; do not fetch RentCast for photos-only. Unknown intent asks a bounded clarification.
 - [ ] Write system instructions describing tools, untrusted data, factual limits, progress honesty, and clarification. Keep them versioned and hashed. Do not put grading labels or scenario-specific answers in prompts.
 
-**Gate:** `uv run pytest -q tests/integration/test_coordinator.py tests/integration/test_budget.py tests/integration/test_cancellation.py tests/integration/test_baseline.py`; all prior backend tests. Use fake clocks and event barriers, no long sleeps.
+**Gate:** `uv run pytest -q tests/integration/test_coordinator.py tests/integration/test_budget.py tests/integration/test_cancellation.py tests/integration/test_baseline.py tests/integration/test_run_ownership.py`; all prior backend tests. Use fake clocks and event barriers, no long sleeps.
 
 **Interview focus:** Explain where the agent has discretion, why serial execution is sufficient, how nested costs accumulate, and when a fixed workflow is preferable.
 
@@ -224,11 +226,11 @@ At the gate, run the stage's commands and inspect actual output. Keep `docs/BUIL
 
 **Files:** create `domain/review.py`, `api/routes.py`, `api/session.py`; extend app/CLI; `tests/integration/test_api.py`, `test_review.py`, `test_human_edits.py`; `web/src/api/client.ts`, generated `types.ts`, integrated workspace views including `ReviewView.tsx`; `web/e2e/workspace.spec.ts`, Playwright config.
 
-**Consumes:** all prior contracts; API table and local security boundary in §7. Replace shell fixtures with the real local API; keep provider modes scripted/fixture.
+**Consumes:** all prior contracts; API table and environment-specific security boundary in §7/§10. Implement a LocalIdentityProvider now and a typed Azure identity seam; the cloud adapter is Stage 15. Replace shell fixtures with the real local API; keep provider modes scripted/fixture.
 
 **Produces:** API endpoints, separate human mutation context, exact-version approval, polling events, persisted case conversation/reconnect, active run/Stop control, real artifact views/edits, and completed local browser journey.
 
-- [ ] Implement local session/CSRF/origin checks and scoped API projections. Never accept body-supplied actor/permissions. Test agent-context approval and fact mutation denial, missing CSRF, cross-case lookup, and safe error responses.
+- [ ] Implement the environment-aware session contract using the local identity adapter now, plus CSRF/origin checks and scoped API projections; preserve the same session response shape for Stage 15 Entra integration. Never accept body-supplied actor/permissions. Test agent-context approval and fact mutation denial, missing CSRF, cross-case lookup, and safe error responses.
 - [ ] Implement review creation and approval transactions with nonempty unique membership and an active/non-cancelled run at creation. Show exact included artifacts; a subset approval does not mean the original full task succeeded. Tests cover missing artifact, stale transitive dependency, expired evidence, wrong hash, repeated approval, edit/approve race, and facts changed then changed back. A success receipt does not publish.
 - [ ] Implement human artifact revisions through the same domain validators and destination-head checks, with explicit human permission. An active run is not required for a human edit. A late generator must not overwrite that revision.
 - [ ] Integrate API client with 500ms ordered-event polling while active; deduplicate by run/sequence/message ID. Persist final/clarifying text and reconnect on reload using active_run_id and conversation history. Stop polling at terminal. Refetch current heads after accepted changes; avoid optimistic approval before server receipt.
@@ -248,7 +250,7 @@ At the gate, run the stage's commands and inspect actual output. Keep `docs/BUIL
 **Produces:** validated CASE_REGISTRY, typed executable cases, CLI commands, resettable isolated trials, independent deterministic graders, redacted reports, and optional human scoring forms.
 
 - [ ] Validate JSONL IDs/families/drivers and implement a reviewed builder for every ID. Service, agent and browser cases remain separately counted. Browser cases link actual Playwright output; missing output is not a pass.
-- [ ] Build each trial in a new temporary database with fixed clock/fixtures, clean budgets/cache, and hidden evaluator labels. Use barriers for the specified races and injected transports for failures. The agent receives no `expected`, `grading`, or scenario ID shortcuts.
+- [ ] Build each trial in a new disposable PostgreSQL test database/schema with fixed clock/fixtures, clean budgets/cache, and hidden evaluator labels. Use barriers for the specified races and injected transports for failures. The agent receives no `expected`, `grading`, or scenario ID shortcuts.
 - [ ] Grade persisted outcomes and trace independently. Implement separate arithmetic/template/ref/approval assertions; do not call production validation to decide success.
 - [ ] Mutation-test graders: valid counterpart passes; corrupt price/unit/room ref/citation value/dependency/approval fails. Include missing-output, grader-exception, unknown-ID, duplicate-ID, zero-selection, missing-family and offline-network failures. Use defined nonzero exit codes.
 - [ ] Implement coverage manifest, trusted external case-registry loading, browser-result import, human score import, and finalize protocol from evaluation plan. Pending required semantic scores are incomplete, never passing. Write manifests/trials/summaries/reports with real counts, raw-versus-repaired outputs, exception records, mode labels, and unknown costs. A scripted run is labeled application testing, not model performance.
@@ -258,23 +260,23 @@ At the gate, run the stage's commands and inspect actual output. Keep `docs/BUIL
 
 **Interview focus:** A valid evaluator is itself a tested system. Explain why final database state, trajectory, and semantic quality need different graders.
 
-## Stage 13 — Real model adapter and optional live RentCast
+## Stage 13 — Azure OpenAI model integration and model-resource setup
 
-**Files:** implement `providers/anthropic_gateway.py`; finish live `providers/rentcast.py`; extend config; `tests/integration/test_model_adapter.py`, `test_live_mode_guards.py`; `docs/LIVE-SETUP.md`; separately marked integration-smoke commands.
+**Files:** implement `providers/azure_openai_gateway.py`; finish optional live `providers/rentcast.py`; extend config; `tests/integration/test_model_adapter.py`, `test_live_mode_guards.py`; `infra/model.bicep`, model parameter example; `scripts/azure/model-preflight.sh`; `docs/LIVE-SETUP.md`.
 
-**Consumes:** official current provider docs, installed SDK version, existing interfaces, budget/attempt ledger, explicit owner-provided runtime credentials and limits.
+**Consumes:** ModelGateway/structured helper protocols, current Microsoft v1 SDK docs, owner Azure choices, a supported deployed model and the existing shared budget/attempt ledger. Read `docs/06-azure-architecture.md` before touching cloud access.
 
-**Produces:** real `ModelGateway`, protocol-correct client tool round trips and structured helper calls; optional live RentCast adapter; mode labels and live-mode guards. No cloud deployment.
+**Produces:** AzureOpenAIModelGateway using `openai`/`azure-identity`, original call-ID tool round trips, schema-validated structured output, actual Azure-model evidence with fixture property data. Live RentCast remains a separately optional adapter.
 
-- [ ] Read current official SDK docs; implement against the installed version and record version/model ID. Model ID is configuration, not a guessed constant. Support real tool call IDs, error tool results, usage, output limits, timeouts, truncation, and malformed response handling. Disable SDK retries.
-- [ ] Adapter tests use recorded/provider-shaped synthetic responses via injected transport. Check exact mapping and call-ID round trips; do not require a key to run unit tests. Keep normalized fixture evidence distinct from raw RentCast response fixtures.
-- [ ] Add explicit live-mode config validation: keys present only server-side, model/rate limits set, actual UTC domain clock and authorized non-synthetic property required for live RentCast. A real model with fixture evidence may use frozen domain time; real monotonic deadlines and UTC audit timestamps remain active. A synthetic replay address cannot be sent to a real provider.
-- [ ] Implement the human-operated `init-case --input ... --confirm-non-synthetic` CLI and `CASE_ID` selection from contracts §1 so optional live RentCast has a real, explicitly confirmed subject. Test synthetic-case rejection. Write setup instructions with empty environment examples and official links. Explain runtime API billing separately from Copilot subscription. Missing credentials are a documented blocked live check, never a reason to fabricate successful runs.
-- [ ] After the owner explicitly enables live model access and spend limits, run a small live-model/frozen-evidence smoke, then real-model evaluation. Record raw/accepted results and failures. Live RentCast is a separately enabled smoke on an authorized real address; if omitted, disclose that integration is unverified.
+- [ ] Resolve and pin compatible SDK versions. Use Azure's `/openai/v1/` endpoint, the actual deployment name, Entra credentials and current documented token audience. Keep opaque protocol continuation items if required; do not expose reasoning. Disable retries. Validate truncation, errors, nullable usage, function-call IDs and function-call outputs with synthetic SDK-shaped adapter tests.
+- [ ] Prepare `infra/model.bicep` for the Foundry resource/project and chosen model deployment, or reference explicitly approved existing resources. Verify region/model/quota and dated rates. Prepare the cost/scope/what-if plan before collecting any missing owner choices; never assume the CLI default subscription is approved. Do not hard-code a catalog model name as a deployment name.
+- [ ] When the owner has authorized this stage with required account/scope/spend values, provision only its model resources or reuse the specified deployment. Use resource-scoped inference permission for local developer identity; provisioning roles are distinct. Store identifiers, not keys, in local configuration. If access/permission is missing, report the exact blocker and leave live evidence incomplete.
+- [ ] Test one actual response, a client-tool request/result loop, one structured helper output, and a forced budget stop against Azure. Then run the existing agent evaluation with frozen evidence, real execution clocks, and fixed fixture-domain time. Record actual model/deployment/version/region and unknown telemetry.
+- [ ] Keep the human-operated real-property init CLI for optional live RentCast. Synthetic addresses are never sent to that property-data provider. No live model/provider call occurs on page load, install or offline tests.
 
-**Gate:** adapter/guard tests pass offline; real-model evidence exists before claiming model behavior. No live request is made by CI, install, page load, or ordinary test commands. If credentials are absent, mark this stage's live checks incomplete and continue preparing nondependent documentation; do not label the final project fully evaluated.
+**Gate:** `uv run pytest -q tests/integration/test_model_adapter.py tests/integration/test_live_mode_guards.py`; Bicep validates; actual Azure capability smoke and model trials are linked in the report. Mocked adapter success does not complete the Azure-model milestone. The full web deployment occurs in Stage 17.
 
-**Interview focus:** Explain precisely which component is real, replayed, or simulated, and what each configuration proves.
+**Interview focus:** Explain a model deployment versus an agent runtime, how Entra access reaches Azure inference, and which tool effects remain controlled by your code.
 
 ## Stage 14 — Baseline comparison, failure analysis, and frozen holdout
 
@@ -294,20 +296,96 @@ At the gate, run the stage's commands and inspect actual output. Keep `docs/BUIL
 
 **Interview focus:** The strongest story is why a particular metric caught a meaningful failure and how the fix changed measured behavior.
 
-## Stage 15 — Clean-checkout verification and rehearsal
+## Stage 15 — Azure identity, persistent sessions and process ownership
+
+**Files:** implement `api/identity.py`, extend `api/session.py`, `state/run_ownership.py`, migrations for memberships/sessions/stored reports; `tests/integration/test_cloud_identity.py`, `test_run_ownership.py`, `test_persistent_sessions.py`; update frontend sign-in/expiry handling and configuration.
+
+**Consumes:** PostgreSQL repository/lease contracts, local API, Entra/Container Apps boundary from `docs/06-azure-architecture.md`.
+
+**Produces:** explicit local/cloud identity providers, cloud startup validation, persisted session/CSRF/actor bindings, per-case reviewer authorization, and tested correctness across overlapping process owners.
+
+- [ ] Reject `APP_ENV=azure` with local_demo authentication, insecure database TLS, missing tenant/reviewer mapping, or invalid origin. Model and human identities are distinct. Test valid tenant/object-ID membership, another signed-in user, wrong tenant and absent/untrusted platform principal.
+- [ ] Persist app session binding and require the current authenticated actor to match it on every human mutation. Test restart retention, CSRF/origin rejection and a body claiming another actor/role. Local tests use an explicit injected identity adapter, not generic spoofable headers.
+- [ ] Complete owner/fence checks on every dispatch, budget reservation, artifact and review commit. Test two simulated process owners, lease renewal, healthy-owner protection, expired-owner interruption, and late result rejection. Never auto-replay an uncertain external call after loss of ownership.
+- [ ] Store bounded redacted UI report projections in PostgreSQL instead of depending on container-local files. Keep telemetry/raw eval artifacts separate from authoritative state.
+- [ ] Document the trusted ingress assumption and test it again after real deployment in Stage 17. A mocked principal unit test cannot establish that Azure strips/rejects forged identity headers.
+
+**Gate:** `uv run pytest -q tests/integration/test_cloud_identity.py tests/integration/test_run_ownership.py tests/integration/test_persistent_sessions.py`; existing review/cancellation/scope tests still pass against PostgreSQL. Azure network behavior remains unverified until Stage 17.
+
+**Interview focus:** Human authentication, application authorization, workload identity and model authority are four different concerns. Explain why one replica does not eliminate revision-overlap races.
+
+## Stage 16 — Azure infrastructure, image, telemetry and deployment runbook
+
+**Files:** `Dockerfile`, `.dockerignore`, `infra/main.bicep`, modules/parameter example from the Azure architecture; `scripts/azure/preflight.sh`, `what-if.sh`, `deploy.sh`, `smoke.sh`, `teardown.sh`; `telemetry/azure_monitor.py`; `docs/AZURE-DEPLOYMENT.md`; tests for cloud configuration, image health and redaction.
+
+**Consumes:** tested application, Stage 13 resource identities, Stage 15 authority/ownership boundaries, owner account/region/budget choices.
+
+**Produces:** buildable single frontend/API image, validated infrastructure definitions, explicit auth/database migration bootstrap, telemetry integration and reviewable deployment/cleanup commands. This stage prepares the full deployment; it does not count as a running Azure prototype.
+
+- [ ] Build a multistage Linux image with locked dependencies and built Vite assets, non-root runtime, one Uvicorn worker on port 8000, liveness/readiness, graceful shutdown and no secrets/local tools/reports in context. Verify the target platform instead of assuming the Mac architecture works in Azure.
+- [ ] Define Container Apps/ACR, user-assigned identity, VNet/private DNS/PostgreSQL with public DB access disabled, Key Vault, monitoring and budget alerts. Reuse/reconcile the model module explicitly. Parameterize model, region, SKUs, identity mappings and owner/expiry; do not invent bill estimates or quota.
+- [ ] Define single-tenant Entra authentication and the application reviewer/case allowlist, with no public bypass route to the backend. Document directory permissions/app-registration bootstrap separately. Prepare Key Vault secret injection without exposing secret values in outputs.
+- [ ] Define managed-identity access to Azure inference, ACR and Key Vault plus a narrowly privileged PostgreSQL runtime identity. Define a separate migration identity and manually triggered one-shot private-network migration Job. App containers do not perform schema administration.
+- [ ] Instrument redacted OpenTelemetry spans to Application Insights using current supported packages. Preserve durable audit events independently. Test a seeded secret/contact marker is absent from spans and output bundles; content capture stays disabled by default.
+- [ ] Generate a concrete dated deployment plan/cost estimate, Bicep validation and what-if when authorized Azure access exists. Teardown defaults to inventory/dry run and names the exact dedicated group and separately tracked lab/directory objects. Do not auto-deploy on PRs.
+
+**Gate:** `docker build` and local container health work; `az bicep build --file infra/main.bicep` succeeds; cloud config/redaction tests pass; deployment plan names actual parameters and permissions or explicitly identifies missing inputs. Owner review is of concrete resources/commands; no new permission question is needed when that scope is already authorized.
+
+**Interview focus:** Show what infrastructure owns, what your runtime owns, and how identity/telemetry/cost choices preserve the existing safety boundaries.
+
+## Stage 17 — Deploy and verify the Azure prototype
+
+**Files:** execute prepared scripts within the authorized scope; fill `docs/AZURE-DEPLOYMENT-RESULTS.md`; add `evals/cloud/scenarios.jsonl` and executable cloud smoke drivers; preserve sanitized deployment/test artifacts.
+
+**Consumes:** reviewed Stage 16 plan, exact owner subscription/region/identity/spend configuration, valid credentials/permissions, and the built image digest.
+
+**Produces:** a working authenticated Azure HTTPS prototype, actual cloud acceptance evidence, known limitations, and a verified cleanup inventory. Provisioning is a real billable action in this stage; this instruction-editing task has not executed it.
+
+- [ ] Apply the reviewed infrastructure to its dedicated resource group. Configure Entra before enabling usable external ingress, initialize schema/seed through the private migration path, and deploy the immutable image digest. Start with scripted model/fixture evidence so infrastructure tests do not accidentally spend on models.
+- [ ] Verify anonymous denial, authorized reviewer success, unlisted tenant-user denial, CSRF/origin enforcement and forged-principal resistance. Load/inspect/edit/review in the same HTTPS workspace. The Azure UI must visibly report its deployment/model/evidence mode without displaying secrets.
+- [ ] Test accepted-state persistence through restart, healthy run ownership during revision overlap, expiration of an orphaned lease, concurrent start rejection, stale approval and late/cancelled result rejection. No duplicate billable retry or automatic provider replay.
+- [ ] Explicitly enable Azure-model inference within the run/batch cap and complete a task with frozen evidence. Verify managed identity refresh, current data/approval state and correlated request/run/tool/model traces. Live RentCast remains optional and separately labeled.
+- [ ] Record group/region/resource IDs, revision/image digest, SDK/model versions, auth/DB configuration fingerprints, timestamps, check results, cost assumptions/observed spend and limitations. Do not store tokens or private contact/property content in the shareable report.
+- [ ] Exercise rollback to a compatible prior image if available; verify cleanup dry-run targets only owned resources. Keep the deployed demo until the owner elects teardown; documenting cleanup is not permission to delete the working demo immediately.
+
+**Gate:** all required cloud acceptance checks in docs06 are backed by actual Azure observations; cloud failures stay distinct from offline/model-quality failures. An absent Azure account/permission leaves this stage incomplete rather than changing the target back to local.
+
+**Interview focus:** Demonstrate a real deployment, an actual identity boundary, state surviving infrastructure changes, and evidence of behavior under failure.
+
+## Stage 18 — Build and compare a managed Foundry agent
+
+**Files:** `labs/foundry_agent/README.md`, runner/fixture/cleanup code and optional dependency group; `docs/FOUNDRY-LAB-RESULTS.md`; `tests/labs/test_foundry_function_boundary.py`.
+
+**Consumes:** `docs/07-foundry-agent-lab.md`, actual Foundry project/model access and an owner-configured lab spend cap. This is separate from the deployed application coordinator.
+
+**Produces:** one actual versioned Foundry Agent Service prompt agent, one client-executed read-only property function, three measured test cases and a lifecycle/authority comparison.
+
+- [ ] Use the current supported new-project SDK/API and the project endpoint, not the direct model endpoint. Pin versions and verify role scope before creating the lab agent. Keep all production write/approval tools absent.
+- [ ] Create the versioned prompt agent and implement the bounded function-call/output client loop. Test names/arguments/call IDs and disallowed function handling offline before live execution.
+- [ ] Run the known-facts, forbidden-approval, and injected-tool-text scenarios. Record actual output/trace and limits, including unknown internal service work/cost. Compare with the custom coordinator on the same inputs.
+- [ ] Write who owns conversation, tools, retries, iteration limits, identity, tracing and cleanup in each design. An optional Agent Framework version may follow, but it must not silently replace the production loop or its budgets.
+- [ ] Delete only the exact lab-owned agent/version/conversations captured in its manifest once results are saved; verify cleanup or state what remains. Retain the application/model resources needed for the interview.
+
+**Gate:** offline boundary tests pass; actual Agent Service resource/invocation evidence and the three-case comparison exist; lab lifecycle/cleanup is recorded. A direct model response does not satisfy this managed-agent milestone.
+
+**Interview focus:** Explain Azure-hosted model inference versus managed agent service versus client framework orchestration, using code and traces from both systems.
+
+## Stage 19 — Clean-checkout verification and rehearsal
 
 **Files:** finalize README, `docs/BUILD-PROGRESS.md`, `docs/DEMO-SCRIPT.md`, `docs/RESULTS.md`, `docs/LIMITATIONS.md`, `.github/workflows/checks.yml`; optional local demo recording with synthetic data only.
 
-**Consumes:** completed project and actual reports, plus the supplied interview playbook.
+**Consumes:** completed project, actual Azure deployment/managed-agent lab reports, plus the supplied interview playbook.
 
-**Produces:** reproducible local project, offline CI, a backup fixture demo, a concise technical talk, and accurate evidence claims.
+**Produces:** reproducible local and Azure project, offline CI, an authenticated cloud demo plus backup fixture replay, a concise technical talk, and accurate evidence claims.
 
 - [ ] In a new temporary checkout/environment, install from lockfiles, initialize synthetic data, and start backend/frontend using README only. Confirm no original Uplisted file or secret is required.
 - [ ] Run complete backend, frontend, browser, and harness self-tests. CI runs scripted/fixture only with external network blocked during tests; dependency installation/browser installation are separate setup steps. Do not run paid evals on pull requests.
-- [ ] Walk the live demo: useful request, source-linked sentence, schematic caveat, photos-only restraint, injection/failure handling, stale approval rejection, and measured report. Keep a fixture replay and screenshots/recording as a clearly labeled backup.
+- [ ] Freeze the final runtime/dependency/prompt/schema bundle fingerprint. Re-run affected model, browser and cloud checks after Stages 15–18, and rerun the full required suite for the final snapshot if its runtime bundle changed. Earlier Stage 14 comparisons remain historical evidence. Use the compatibility rules in the evaluation plan; do not combine mismatched runtime evidence into a release claim.
+- [ ] Execute `finalize --profile azure` with the model/service/browser/cloud reports and actual Foundry lab receipt, using the command in docs04. Resolve missing grades/results and distinguish quality failures from critical-control failures. Save the final status/limitations; a generated report is not a passing release.
+- [ ] Recheck the Azure URL, allowed reviewer, resource expiry and cost/cleanup notes. Walk the live demo: useful request, source-linked sentence, schematic caveat, photos-only restraint, injection/failure handling, stale approval rejection, and measured report. Keep a fixture replay and screenshots/recording as a clearly labeled backup.
 - [ ] Fill talk placeholders only with actual implementation details/results. Explain Copilot's role honestly and identify the contracts, reviews, tests, and fixes you personally understood and directed.
-- [ ] Record limitations: local auth, process interruption, synthetic tasks, restricted listing grammar, unmeasured physical/market accuracy, incomplete live integrations, and any remaining failures. Remove unfinished UI claims or label them clearly.
+- [ ] Record limitations: local-development versus Entra cloud auth, lease-expiry interruption, synthetic tasks, restricted listing grammar, unmeasured physical/market accuracy, incomplete live integrations and managed-service accounting limits, and any remaining failures. Remove unfinished UI claims or label them clearly.
 
-**Gate:** clean-checkout commands reproduce the documented outcome, critical checks pass, and the ten-minute talk can be delivered without relying on Copilot to explain the code. Code exists only after implementation; this handoff itself does not satisfy the gate.
+**Gate:** clean-checkout commands reproduce the documented outcome, critical checks pass, and the ten-minute talk can be delivered without relying on Copilot to explain the code. Azure deployment and the managed-agent lab must have actual evidence; neither is replaced by the offline backup. Code exists only after implementation; this handoff itself does not satisfy the gate.
 
 **Interview focus:** Show ownership of the design and evidence, including limitations. Framework names and code volume are secondary.

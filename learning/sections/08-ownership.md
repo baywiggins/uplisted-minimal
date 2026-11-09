@@ -1,22 +1,22 @@
 # Reproducibility and ownership
 
-Stages 15. This section groups concepts for learning; implement **one numbered stage per turn**, not the whole section.
+Stages 19. This section groups concepts for learning; implement **one numbered stage per turn**, not the whole section.
 
 ## What you are learning
 
-The project is ready to demonstrate when a fresh checkout can run it and you can explain its critical decisions. A polished demo does not substitute for measured results. Connect a failure to its cause, mitigation, independent regression, and remaining limitation.
+The project is ready to demonstrate when a fresh checkout can run it and the authenticated Azure deployment is verified and you can explain its critical decisions. A polished demo does not substitute for measured results. Connect a failure to its cause, mitigation, independent regression, and remaining limitation.
 
 ## How the stages build on each other
 
-- 15: Reproduce the project from a clean checkout and rehearse using actual evidence.
+- 19: Reproduce the project from a clean checkout and rehearse using actual evidence.
 
 | Stage | Copy-ready implementation prompt | Record your understanding |
 |---|---|---|
-| 15 | [Clean-checkout verification and rehearsal](../../prompts/15-clean-checkout-verification-and-rehearsal.md) | [Learning checkpoint](../checkpoints/15.md) |
+| 19 | [Clean-checkout verification and rehearsal](../../prompts/19-clean-checkout-verification-and-rehearsal.md) | [Learning checkpoint](../checkpoints/19.md) |
 
 ## Trace this after implementation
 
-Clean checkout → locked dependencies → synthetic initialization → browser flow → stored evaluation report → corresponding code/test → honest interview explanation.
+Clean checkout → locked dependencies → local PostgreSQL → Azure deployment/identity checks → browser flow → stored evaluation report → corresponding code/test → honest interview explanation.
 
 Before code exists, this is the intended path. After implementation, Copilot should show the actual functions and state changes in your repository.
 

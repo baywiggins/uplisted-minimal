@@ -6,14 +6,16 @@ These are design targets for Copilot to implement. Code examples below are contr
 
 ```text
 pyproject.toml, uv.lock, .python-version, .node-version, .env.example
+compose.yaml, Dockerfile, .dockerignore, infra/
 src/uplisted/
   config.py, errors.py, contracts.py, cli.py
-  api/app.py, api/routes.py, api/session.py
-  state/db.py, state/repository.py, state/hashing.py
+  api/app.py, api/routes.py, api/session.py, api/identity.py
+  state/db.py, state/repository.py, state/hashing.py, state/migrations/
+  state/run_ownership.py
   domain/evidence.py, domain/pricing.py, domain/floorplan.py
   domain/photos.py, domain/listing.py, domain/review.py
   providers/base.py, providers/scripted.py, providers/rentcast.py
-  providers/anthropic_gateway.py
+  providers/azure_openai_gateway.py
   agent/tools.py, agent/dispatcher.py, agent/coordinator.py
   agent/budget.py, agent/prompts.py, agent/baseline.py
   telemetry/events.py, telemetry/redaction.py
@@ -22,7 +24,8 @@ src/uplisted/
 tests/unit/, tests/integration/, tests/evals/, tests/conftest.py
 web/src/api/, web/src/components/, web/src/views/, web/src/state/
 web/tests/, web/e2e/, web/package.json, web/package-lock.json
-fixtures/, evals/dev/, evals/regression/, docs/, prompts/
+fixtures/, evals/dev/, evals/regression/, evals/cloud/, docs/, prompts/
+infra/model.bicep, infra/main.bicep, scripts/azure/, labs/foundry_agent/
 .github/copilot-instructions.md, .github/workflows/checks.yml
 ```
 
@@ -33,6 +36,8 @@ Standard commands, from the new repository root:
 ```bash
 uv sync --locked
 npm --prefix web ci
+docker compose up -d db
+uv run python -m uplisted.cli migrate
 uv run pytest -q
 uv run ruff check .
 uv run mypy src
@@ -44,9 +49,9 @@ uv run uvicorn uplisted.api.app:create_app --factory --host 127.0.0.1 --port 800
 npm --prefix web run dev -- --host 127.0.0.1 --port 5173
 ```
 
-Use separate terminals for backend/frontend. `init-demo` is idempotent: creates missing synthetic cases and never overwrites an existing case. Stage 13 adds `init-case --input /absolute/path/to/property.json --confirm-non-synthetic` for a human-confirmed real property. It validates PropertyFacts, assigns a new case ID and actual-UTC provenance, marks it non-synthetic, and never overwrites an existing case. Select it using server configuration `CASE_ID`; restart the local app to bind a new human session to that case. Keep its input file under ignored local storage and never print private fields in normal logs. It is not a model tool. An explicit `reset-demo --confirm-local-reset` command is allowed only for local synthetic data, when no run is active. CI and evals use a temporary database, not `.local/demo.sqlite3`.
+Use separate terminals for backend/frontend. `init-demo` is idempotent: creates missing synthetic cases and never overwrites an existing case. Stage 13 adds `init-case --input /absolute/path/to/property.json --confirm-non-synthetic` for a human-confirmed real property. It validates PropertyFacts, assigns a new case ID and actual-UTC provenance, marks it non-synthetic, and never overwrites an existing case. Select it using server configuration `CASE_ID`; restart the local app to bind a new human session to that case. Keep its input file under ignored local storage and never print private fields in normal logs. It is not a model tool. An explicit `reset-demo --confirm-local-reset` command is allowed only for local synthetic data, when no run is active. CI and evals use disposable PostgreSQL test databases/schemas, never the development or Azure database. Test cleanup checks the test namespace before dropping anything.
 
-Stage 01 creates scripts `check` (TypeScript plus lint), `test` (Vitest non-watch), `build`, and later `test:e2e`. Playwright's configuration starts the local backend/frontend in fixture mode with a separate database. E2E browser network allowlist permits only loopback; backend tests block outbound sockets. Dependency installation can use the network; test execution cannot access external services.
+Stage 01 creates scripts `check` (TypeScript plus lint), `test` (Vitest non-watch), `build`, and later `test:e2e`. Playwright's configuration starts the local backend/frontend in fixture mode with a separate database. E2E browser network allowlist permits only loopback; backend tests deny external sockets but allow the configured loopback PostgreSQL connection. Dependency/image installation can use the network; offline test execution cannot access external providers. Deployed Azure smoke tests are a separate explicit command, never part of offline CI.
 
 ## 2. Shared types and validation
 
@@ -67,6 +72,8 @@ class ExecutionContext:           # constructed by server; absent from tool JSON
     actor_id: str
     case_id: str
     run_id: str | None           # non-null for tools; null for human commands
+    owner_id: str | None         # server process identity, never tool JSON
+    fence: int | None            # current run generation for agent effects
     permissions: frozenset[str]
 
 class ToolResult[T]:
@@ -85,7 +92,7 @@ class ToolError:
 
 Enforce exclusive `data`/`error` combinations. `ErrorCode` is one of `needs_clarification`, `input_stale`, `evidence_insufficient`, `provider_disabled`, `provider_unavailable`, `provider_outcome_unknown`, `validation_failed`, `forbidden`, `budget_exhausted`, `cancelled`, `idempotency_conflict`, `run_active`, `not_found`. A tool failure never creates a successful artifact.
 
-Pure domain functions return their documented payload or raise `DomainError(error: ToolError)`; the dispatcher/API adapter converts that exception to the documented envelope. Do not alternate between bare dicts, exceptions, and nullable success values in different services. Provider/gateway methods that perform IO are async; hashing, arithmetic, compilation, and small repository transactions are synchronous. The coordinator awaits IO and keeps the event loop responsive to cancellation.
+Pure domain functions return their documented payload or raise `DomainError(error: ToolError)`; the dispatcher/API adapter converts that exception to the documented envelope. Do not alternate between bare dicts, exceptions, and nullable success values in different services. Provider/gateway and runtime repository methods are async from Stage 03 onward, using psycopg AsyncConnectionPool and short async transaction blocks. Hashing, arithmetic and schematic compilation are pure synchronous functions. Signature tables below omit the async keyword for brevity; callers await repository/coordinator/IO methods. Do not build a blocking repository and retrofit it after heartbeats exist.
 
 `PropertyFacts` contains `address` (street/city/state/postal_code/unit, where unit may be null), `property_type` (`single_family|townhouse|condo|apartment`), `bedrooms` (0–20), `full_bathrooms` (0–20), `half_bathrooms` (0–20), `square_feet` (positive int or null), `levels` (1–4), `has_garage` (bool or null), `asking_rent_cents` (positive int or null), and `layout_description` (string or null, max 4,000 chars), plus `room_measurements: list[RoomMeasurement]` (default empty, max 40). Missing versus known false is meaningful. Avoid a generic amenity dictionary in v1.
 
@@ -99,7 +106,7 @@ Artifact IDs identify a revision series of one kind in one case; revision advanc
 
 ## 3. Storage, dependencies, and transactions
 
-Use standard `sqlite3`, parameterized SQL, foreign keys enabled, WAL mode, and short transactions. Tables: `cases`, `property_revisions`, `artifact_revisions`, `artifact_heads`, `runs`, `run_events`, `review_bundles`, `approvals`, `idempotency_records`, `provider_attempts`, `conversation_messages`. Model JSON can be stored as validated JSON text; don't build an ORM or migration framework. Track a schema version and ship an explicit v1 initialization script/function. One process only; no distributed durability claims.
+Use PostgreSQL 16, psycopg 3, parameterized SQL, foreign keys, a bounded connection pool (initial min 1/max 5 per process), explicit transaction scopes, and numbered SQL migrations. Docker Compose supplies local PostgreSQL; Azure Flexible Server is the required cloud store. Tables: `cases`, `property_revisions`, `artifact_revisions`, `artifact_heads`, `runs`, `run_events`, `review_bundles`, `approvals`, `idempotency_records`, `provider_attempts`, `conversation_messages`, `browser_sessions`, `case_memberships`, `stored_reports`. Use validated JSONB payloads and canonical application hashing; JSONB key ordering must not change hashes. Use timestamptz for timestamps, bigint for money, and explicit scoped uniqueness/FK constraints. A schema_migrations table records ordered migrations under a separate migration identity. Do not add an ORM or a second database adapter. Keep locks short, never across provider calls, and use a consistent case/run/head/review lock order. A process-local coordinator does not promise automatic durable job resumption.
 
 Repository methods:
 
@@ -119,7 +126,7 @@ approve_review(ctx: HumanContext, bundle_id: str,
 
 `HumanContext` comes only from the browser session adapter and contains actor/case permissions. It is not a model-tool argument. Domain helper interfaces use repository transactions; no tool writes SQL itself.
 
-Every artifact acceptance transaction checks: case scope; current property revision; exact dependency heads and their transitive freshness; expected target head; active non-cancelled run for agent-origin writes (or explicit human edit permission for human-origin writes); and idempotency key. If anything changed during generation, reject `input_stale` or `cancelled`; retain diagnostic attempt metadata without installing the result. Do not hold a transaction across model/HTTP calls.
+Every artifact acceptance transaction checks: case scope; current property revision; exact dependency heads and their transitive freshness; expected target head; active non-cancelled run with current unexpired owner/fence for agent-origin writes (or explicit human edit permission for human-origin writes); and idempotency key. If anything changed during generation, reject `input_stale` or `cancelled`; retain diagnostic attempt metadata without installing the result. Do not hold a transaction across model/HTTP calls.
 
 Any property revision makes all prior derived artifacts stale in v1, even if an unrelated field changed or was changed back. This conservative choice is easier to prove than field-level invalidation. Changing a floorplan invalidates dependent photos and reviews; an independent pricing artifact remains current if its dependencies remain current. Never automatically revive an old approval.
 
@@ -127,7 +134,7 @@ Idempotency key scope is `(case_id, operation, command_key)`, with a request has
 
 Review membership must contain 1–5 refs, at most one of each artifact kind, with no property refs, duplicates, or cross-case refs. Approval means approval of exactly these displayed artifacts, not implicit completion of every item in the original natural-language request. The UI names all included artifacts and any unresolved requested work. Task-success graders independently compare membership with the scenario goal; a partial bundle cannot earn full-package success. `create_review` also checks the run is active and not cancelled in its commit transaction.
 
-Review bundle payload: `bundle_id`, `case_id`, `property_ref`, `artifact_refs`, transitive `dependency_refs`, `created_by_run`, `created_at`, `bundle_hash`. Tool submission requires all requested artifacts present, current, validated, and free of blocking issues; otherwise a typed error, no bundle. Approval rechecks everything atomically and stores reviewer, exact bundle/hash, timestamp, and receipt ID. Review bundles are immutable. Human property edits and approval compete through transactions; one must observe the other's new revision.
+Review bundle payload: `bundle_id`, `case_id`, `property_ref`, `artifact_refs`, transitive `dependency_refs`, `created_by_run`, `created_at`, `bundle_hash`. Tool submission requires all requested artifacts present, current, validated, and free of blocking issues; otherwise a typed error, no bundle. Approval rechecks everything atomically and stores reviewer, exact bundle/hash, timestamp, and receipt ID. Review bundles are immutable. Human property edits and approval serialize on the case row and check current heads in the same short transaction; one must observe the other's new revision. Use SELECT FOR UPDATE consistently, not a read/check outside the transaction.
 
 ## 4. Domain contracts
 
@@ -179,19 +186,19 @@ All tool inputs forbid extra keys. References use the shared `ResourceRef`. In e
 | `draft_listing_copy` | `{property_ref}` | Listing artifact; helper chooses typed claims |
 | `submit_for_review` | `{artifact_refs: ResourceRef[]}` | Immutable ReviewBundle; does not approve |
 
-`ToolRegistry` holds name, Pydantic input type, description, required permission, effect type, and handler. `dispatch_tool(ctx, call: ToolCall, budget: RunBudget) -> ToolResult` performs allowlist lookup, strict parse, scope/reference checks, budget reservation, handler, output validation, atomic acceptance, and event emission. No generic URL/file/SQL/shell capability. All exposed output is a minimal projection. Unknown/cross-case refs return the same safe denial without revealing another case's existence/content.
+`ToolRegistry` holds name, Pydantic input type, description, required permission, effect type, and handler. `dispatch_tool(ctx, call: ToolCall, budget: RunBudget) -> ToolResult` first consumes a tool-attempt allowance, then performs allowlist lookup, strict parse, scope/reference checks, any monetary/provider reservation, handler, output validation, atomic acceptance, and event emission. Unknown names and malformed arguments therefore consume the tool-attempt allowance too. ToolCall includes a server-assigned attempt_id derived from run/model-attempt/tool-slot, separate from the provider_call_id used in the wire protocol. Reused provider call IDs in a new model proposal cannot evade counting. A transport replay of the same server attempt_id is idempotent; exhausting the allowance stops dispatch while still recording the blocked proposal. No generic URL/file/SQL/shell capability. All exposed output is a minimal projection. Unknown/cross-case refs return the same safe denial without revealing another case's existence/content.
 
 Never trust a model's `is_admin`, claimed human approval, input URL, replacement facts, cached payload, or success boolean. These fields are absent from schemas. Provider text is data and cannot register tools or change the system policy.
 
 ## 6. Coordinator, progress, and budgets
 
-`ModelGateway.next_turn(messages, tool_specs, request_budget) -> ModelTurn` returns ordered visible text blocks, tool calls with IDs/names/JSON args, finish reason, and nullable usage. `ModelGateway.generate_structured(purpose, input_data, schema, request_budget) -> GenerationAttempt` supports `floorplan_intent` and `listing_intent`. `GenerationAttempt` preserves raw payload and parse/semantic outcomes. Implement scripted and live providers behind the same interface.
+`ModelGateway.next_turn(messages, tool_specs, request_budget, protocol_state: ProviderProtocolState | None) -> ModelTurn` returns ordered visible text blocks, tool calls with IDs/names/JSON args, finish reason, nullable usage, and updated protocol_state. ProviderProtocolState is an opaque adapter-owned collection of required wire continuation items, bound to exactly one run and model/deployment configuration. It is separate from visible conversation and ordinary event/report exports; never share it between cases, helper calls, or runs. The coordinator holds it in run-local memory and supplies it on the next turn. Scripted mode can use null. A process interruption discards it and never claims resumable paid work. Azure may include opaque encrypted reasoning/continuation items; preserve only what its installed protocol requires and do not display or interpret private reasoning. Test a multi-turn function-call round trip with continuation items intact. `ModelGateway.generate_structured(purpose, input_data, schema, request_budget) -> GenerationAttempt` supports `floorplan_intent` and `listing_intent`. `GenerationAttempt` preserves raw payload and parse/semantic outcomes. Implement scripted and live providers behind the same interface.
 
 `Coordinator.run(ctx, request: RunRequest) -> RunOutcome` is application-owned. `RunRequest` has user message ≤4,000 chars and expected property revision. One active run per case; a second start returns `run_active`. Tools execute serially, even if the model proposes multiple calls. Capture a tool's current target head before starting it. Do not let a model-emitted final text prove completion; run outcome contains actual committed refs and unresolved issues.
 
 Use `RunRequest = {message, expected_property_revision}`. `RunOutcome` contains `run_id`, `status`, `accepted_artifact_refs`, `review_bundle_ids`, `unresolved_issues: list[ToolError]`, `final_message_id`, and `usage_summary` (counts, elapsed_ms, nullable known_cost_usd, unknown_cost_attempt_count). `CaseView` contains `property`, `public_facts`, `heads` keyed by ArtifactKind with ref/freshness/issues, `missing_fields`, `model_mode`, `rentcast_mode`, `domain_as_of`, recent `conversation`, `active_run_id`, and `latest_review_id`. Define these models once in contracts; generate frontend types from the implemented OpenAPI schema.
 
-`RunBudget.reserve_tool(tool_name, call_id) -> Reservation`; `reserve_model(purpose, input_token_estimate, max_output_tokens, estimated_cost_usd) -> Reservation`; `record_usage(reservation_id, usage: UsageRecord) -> None`; `check_deadline() -> None`. Reservations are counted before dispatch and are idempotent by call/attempt ID. A pre-dispatch cancellation releases unspent monetary reservation while preserving attempted-counter history; dispatched requests reconcile to known or unknown cost, never silently refund. `UsageRecord` separates estimated input tokens, provider-reported tokens, actual known cost, and missing usage. No integer or monetary budget can be reset by a nested helper.
+`RunBudget.reserve_tool(tool_name, attempt_id) -> Reservation` consumes only the tool-attempt count at dispatcher entry, before lookup/parsing; `reserve_model(purpose, input_token_estimate, max_output_tokens, estimated_cost_usd) -> Reservation`; `record_usage(reservation_id, usage: UsageRecord) -> None`; `check_deadline() -> None`. Attempt reservations are counted before validation and idempotent by server attempt_id. Monetary/model reservations happen only after relevant validation, before external dispatch. A pre-dispatch cancellation releases unspent monetary reservation while preserving attempted-counter history; dispatched requests reconcile to known or unknown cost, never silently refund. `UsageRecord` separates estimated input tokens, provider-reported tokens, actual known cost, and missing usage. No integer or monetary budget can be reset by a nested helper.
 
 Loop: load scoped context → call model → dispatch allowed tools → append typed results → call model again → stop on final response, clarification, cancellation, exhaustion, or error. Provider protocol errors become failures, not fabricated observations. The live adapter must return tool results using the provider's original call IDs. If one call fails, other independent proposed calls may proceed only when still authorized/current and within budget; never report the batch as entirely successful.
 
@@ -199,7 +206,7 @@ Conversation is persisted per case in `conversation_messages`: `message_id`, cas
 
 Clarification ends the run with `needs_clarification`; no suspended worker is held. The user confirms required property changes inline and sends a new request. Conversation remains visible. Server-rendered concise progress messages are enough for v1; token-level streaming is optional. Use polling for durable events, not a WebSocket service.
 
-Run states: `queued → running → completed|needs_clarification|failed|cancelled|budget_exhausted|interrupted`. Cancellation flag can be set during running. `completed` means the coordinator ended normally; separate task evaluation determines correctness. A partial run reports completed refs plus unresolved requests. On process restart, previously active runs become `interrupted`; no automatic paid-call replay.
+Run states: `queued → running → completed|needs_clarification|failed|cancelled|budget_exhausted|interrupted`. Cancellation flag can be set during running. `completed` means the coordinator ended normally; separate task evaluation determines correctness. A partial run reports completed refs plus unresolved requests. On process restart/reconciliation, only runs with expired database leases become `interrupted`; a new revision must not interrupt a healthy old owner. No automatic paid-call replay. Stage 15 adds cloud identity tests, but the ownership schema and checks begin in Stages 03/10.
 
 Keep three clocks distinct: domain as-of time for fixture freshness, actual UTC for audit/provider events, and monotonic elapsed time for deadlines. Deterministic tests can inject all three; real-model evaluations with frozen RentCast fixtures may freeze the domain clock while recording real latency/time. Live RentCast always uses actual UTC for freshness and a non-synthetic subject. `MODEL_MODE=live` alone does not prohibit fixture replay.
 
@@ -209,16 +216,16 @@ Live mode additionally requires configured maximum estimated run spend, model in
 
 Stop sets cancellation before returning to the UI; subsequent dispatch and artifact acceptance check it. Ask the SDK to cancel in-flight work if possible. Record an already-dispatched result/unknown outcome, but do not install a late artifact after cancellation. Already accepted artifacts remain. Do not claim that Stop refunds a request.
 
-## 7. API and local authority boundary
+## 7. API and local/Azure authority boundaries
 
-All routes under `/api`. Vite proxies these to loopback backend so browser requests are same-origin. Backend binds loopback and validates allowed hosts/origins. Demo session is a random opaque, HttpOnly, SameSite=Strict cookie bound server-side to a seeded actor and case; mutating human APIs require a session-bound CSRF token and expected origin. Session bootstrap has no paid work. UI never submits trusted role claims. This is a **local single-user demonstration**, not production authentication or tenant isolation certification.
+All routes under `/api`. Vite proxies these to loopback backend so browser requests are same-origin. Backend binds loopback and validates allowed hosts/origins. Demo session is a random opaque, HttpOnly, SameSite=Strict cookie bound server-side to a seeded actor and case; mutating human APIs require a session-bound CSRF token and expected origin. Session bootstrap has no paid work. UI never submits trusted role claims. This seeded session mode is allowed only with `APP_ENV=local` on loopback. Azure requires Entra-authenticated ingress and server-owned `(tenant_id, object_id)` membership; the seeded local mode must fail at cloud startup. See §10 and the Azure architecture. Neither mode is a production-security certification.
 
 The runtime model gets no browser cookies, CSRF token, HTTP client, or generic API tool. Its `ExecutionContext` lacks `approve` and `confirm_property` permissions. Tests call the approval service with an agent context and assert denial; merely hiding the button is insufficient. The separate endpoint is an authority boundary inside the same screen.
 
 | Method/path | Contract |
 |---|---|
 | `GET /health` | Readiness and version only; no secrets |
-| `POST /session` | Local session bootstrap; returns CSRF token, case ID, modes |
+| `POST /session` | Environment-aware session bootstrap: local seeded identity only on loopback; in Azure require verified Entra identity plus case membership. Returns `{csrf_token, case_id, model_mode, rentcast_mode}` and opaque HttpOnly session cookie; no actor/role from body. No paid work |
 | `GET /case` | Bound CaseView, current refs/freshness, recent conversation, active run and latest review |
 | `GET /conversation?before_seq=N` | Earlier case-bound visible messages, ordered/paginated |
 | `PATCH /case` | Human PropertyFacts + expected_revision + idempotency header |
@@ -230,9 +237,9 @@ The runtime model gets no browser cookies, CSRF token, HTTP client, or generic A
 | `POST /runs/{id}/cancel` | Human command, idempotent; cancellation requested/actual state |
 | `GET /reviews/{id}` | Bundle, dependencies, current freshness and approvability |
 | `POST /reviews/{id}/approve` | Human-only expected_hash + idempotency header; atomic receipt |
-| `GET /reports/{id}` | Only allowlisted redacted stored reports; no arbitrary paths/no eval execution |
+| `GET /reports/{id}` | Only bounded redacted stored_reports rows scoped to the actor/case; no arbitrary paths/no eval execution |
 
-Validation failures map to 422; stale/idempotency/run-active conflicts to 409; scoped hidden resources to 404; insufficient permission to 403; provider failures are recorded in run/tool outcomes, not disguised as HTTP success artifacts. Error envelope: `{error:{code,message,details},request_id}`. Generation runs must be cancellable while the server serves other requests; use async IO and move brief blocking SQLite operations off the event loop if needed. A process-local async task supervisor is sufficient; explicitly document loss of in-flight execution on restart.
+Validation failures map to 422; stale/idempotency/run-active conflicts to 409; scoped hidden resources to 404; insufficient permission to 403; provider failures are recorded in run/tool outcomes, not disguised as HTTP success artifacts. Error envelope: `{error:{code,message,details},request_id}`. Generation runs must be cancellable while the server serves other requests; use async provider IO and a psycopg async pool so heartbeats and cancellation remain responsive. A process-local async task supervisor may execute work, but PostgreSQL admission, leases and fencing control ownership. Accepted state survives restart; expired in-flight work becomes interrupted without replay.
 
 ## 8. Events and data handling
 
@@ -255,3 +262,16 @@ Run details shows concise actions, versions, validation, blocked attempts, elaps
 - A zero-case or broken-grader evaluation cannot produce a passing report.
 
 See 04 for independent grading. These invariants are targets to implement and measure, not claims that this document has proven them.
+
+
+## 10. Azure deployment and ownership additions
+
+[06-azure-architecture.md](06-azure-architecture.md) is canonical for Azure resource topology, deployment, identity, budget and cleanup requirements. Local and cloud share the PostgreSQL repository and invariants. `APP_ENV=azure` requires verified TLS, Entra ingress/case membership, managed identity, no seeded login, and a configured allowlisted origin. One image serves frontend assets and API; bind `0.0.0.0:8000` only inside the protected container, with one Uvicorn worker. The local dev server remains loopback.
+
+Add `RunOwnership(owner_id, fence, lease_expires_at)` and repository methods `claim_run(ctx, request, command_key) -> RunOwnership`, `renew_lease(run_id, owner_id, fence) -> bool`, and `interrupt_expired_runs() -> list[str]`. Claim locks the case, allocates a monotonic fence, and atomically creates/adopts only the intended new queued run. A partial unique index allows one queued/running row per case. Lease lifetime is 30 seconds; renewal every 5 seconds uses database time. Local deterministic tests inject a controlled database-time abstraction; cloud checks use actual database time.
+
+Every agent dispatch/reservation and every artifact/review commit checks owner, fence, unexpired lease, current dependencies and cancellation. A cancelled/expired owner cannot update a head even if its model call later succeeds. A healthy lease in another revision cannot be invalidated by startup cleanup. Record provider outcomes after ownership loss as diagnostic attempt updates through a dedicated non-authoritative path; they cannot create artifacts, approval, or a new run. The first owner losing a lease may still incur external cost, so never auto-replay ambiguous work. Add no automatic takeover/resume in v1.
+
+For cloud browser requests, derive the actor from protected ingress identity and application membership, then issue/validate a persisted opaque application session/CSRF binding. Require the same authenticated actor on subsequent requests. Use tenant/object IDs, not email strings. On local requests, ignore caller-supplied platform headers unless a test-only injected identity adapter is explicitly installed. Never accept a generic request header as proof of cloud authentication without the documented ingress boundary. Model contexts cannot construct HumanContext.
+
+Use Azure OpenAI endpoint/deployment/Entra settings instead of ANTHROPIC_API_KEY. `MODEL_MODE=live` selects Azure inference, not a different authority policy. The separate Stage 18 Foundry agent lab has its own runner, project endpoint, resource lifecycle and report; it cannot invoke the application's human approval endpoint.

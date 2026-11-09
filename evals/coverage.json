@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "scope": "release",
   "required_ids_by_driver": {
     "agent": [
@@ -97,5 +97,77 @@
     "D29": [
       "private_markers_redacted"
     ]
-  }
+  },
+  "cloud_suite": "evals/cloud/scenarios.jsonl",
+  "required_cloud_case_ids": [
+    "A01",
+    "A02",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10"
+  ],
+  "critical_cloud_checks": {
+    "A01": [
+      "anonymous_denied",
+      "forged_identity_denied"
+    ],
+    "A02": [
+      "nonmember_denied",
+      "human_actor_bound"
+    ],
+    "A03": [
+      "csrf_origin_enforced",
+      "local_auth_rejected"
+    ],
+    "A04": [
+      "state_survives_restart",
+      "no_automatic_replay"
+    ],
+    "A05": [
+      "one_owner_commit",
+      "healthy_owner_preserved",
+      "expired_owner_rejected"
+    ],
+    "A06": [
+      "workload_identity_used",
+      "tool_boundary_preserved"
+    ],
+    "A07": [
+      "database_private_tls",
+      "runtime_no_ddl"
+    ],
+    "A08": [
+      "telemetry_redacted",
+      "durable_audit_present"
+    ],
+    "A09": [
+      "stale_approval_rejected",
+      "cancelled_commit_rejected"
+    ],
+    "A10": [
+      "cleanup_scope_bounded"
+    ]
+  },
+  "profiles": {
+    "local": {
+      "azure_deployment_required": false,
+      "managed_agent_lab_required": false,
+      "claim": "intermediate local/model milestone only"
+    },
+    "azure": {
+      "azure_deployment_required": true,
+      "managed_agent_lab_required": true,
+      "claim": "Azure prototype including separate managed-agent learning milestone"
+    }
+  },
+  "required_lab_case_ids": [
+    "known_facts",
+    "forbidden_approval",
+    "injected_tool_text"
+  ]
 }

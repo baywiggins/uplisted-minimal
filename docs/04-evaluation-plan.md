@@ -10,6 +10,8 @@ Measure whether the system accomplishes the requested task, whether the model ma
 | Model evaluation | Real coordinator/helper model with frozen property/RentCast fixtures | Model behavior on the selected tasks and configuration |
 | Browser checks | Actual single-screen UI, scripted backend providers, loopback only | The specified user interactions work |
 | Integration smoke | Explicitly enabled real adapters and limited requests | Selected real provider operations are compatible |
+| Azure deployment acceptance | Authenticated deployed app, PostgreSQL, managed identity and revision tests | The specified cloud deployment works under the tested identity/failure conditions |
+| Managed-agent lab | Actual versioned Foundry prompt agent and bounded read-only client | The managed runtime was exercised; separate from product scores |
 
 None establishes market forecast accuracy, legal compliance, measured physical layout accuracy, production security, or reliability outside the tested distribution. An offline fake agent cannot establish model judgment. A live model with fixture RentCast cannot establish live RentCast integration.
 
@@ -23,17 +25,17 @@ Five holdout families are only a starter check. For a stronger final report, exp
 
 Freeze prompt/configuration and record the code revision before holdout execution. Once a holdout failure is inspected for tuning, move it to regression and replace it with a fresh family. Never report the tuned rerun as untouched holdout performance.
 
-Repeat stochastic cases five times from clean state as an initial choice. Count unique scenarios and total trials separately. Repetitions measure variation on the same tasks; they do not add new-property coverage. Use a fixed clock, a fresh temporary database, clean cache, fresh budgets, and new session per trial. Retain every failure, timeout, and incomplete run.
+Repeat stochastic cases five times from clean state as an initial choice. Count unique scenarios and total trials separately. Repetitions measure variation on the same tasks; they do not add new-property coverage. Use a fixed clock, a fresh disposable PostgreSQL test database/schema, clean cache, fresh budgets, and new session per trial. Retain every failure, timeout, and incomplete run.
 
 ## Scenario specification and executable case registry
 
-Each JSONL row has `id`, `family`, `driver` (`agent|service|browser`), `setup`, `request`, `stimulus`, `expected`, `risk`, and `grading`. The text fields describe the test an implementer must encode; **do not send expected/stimulus/grading text to the runtime model**. `request` is user-visible input. Fixture selection and injected faults are controlled by the harness, not by the model.
+Each JSONL row has `id`, `family`, `driver` (`agent|service|browser`; the separate Azure suite uses `cloud`), `setup`, `request`, `stimulus`, `expected`, `risk`, and `grading`. The text fields describe the test an implementer must encode; **do not send expected/stimulus/grading text to the runtime model**. `request` is user-visible input. Fixture selection and injected faults are controlled by the harness, not by the model.
 
 In Stage 12 create a reviewed `CASE_REGISTRY` mapping each ID to a typed Python case builder, driver, and independent assertions. The runner must not interpret free-text expected statements with an LLM and call that a deterministic check. Registered code constructs initial state and applies the specified stimulus. Unknown/unimplemented registry IDs fail validation. Browser rows map to named Playwright tests; the Python report records them as `not_run` unless their actual result artifact is imported. Service rows exercise boundaries directly and are reported separately from model task trials.
 
 For fresh holdout, allow CLI-only `--case-registry /absolute/path/to/trusted_evaluator/cases.py` with a suite file in that same external evaluator workspace. The evaluator, not Copilot, authors this trusted module. It exports `CASE_REGISTRY` with the same typed case-builder protocol. Import it only in the separate evaluation process against the frozen application package; never expose module loading as an application endpoint/tool. IDs must be implemented in the selected registry, not necessarily the application's public development registry. Keep external labels, graders, and unredacted results outside the coding workspace. The runtime model sees only fixture observations and visible requests.
 
-Define `CaseDefinition` with `setup(TrialContext) -> None`, async `drive(TrialContext) -> OutcomeSnapshot`, `assert_outcome(OutcomeSnapshot) -> list[CheckResult]`, and `required_semantic_criteria: set[str]`. `TrialContext` supplies temporary repository, three clocks, bound actor, gateways, barriers, and selected system (baseline/coordinator). `OutcomeSnapshot` contains read-only persisted state, trace, visible messages, and actual provider/model counters. `CheckResult` contains check_id, pass/fail, safe evidence, and failure detail. This is the stable protocol shared by public and trusted external registries; evaluator-only code never enters runtime model context.
+Define `CaseDefinition` with async `setup(TrialContext) -> None`, async `drive(TrialContext) -> OutcomeSnapshot`, `assert_outcome(OutcomeSnapshot) -> list[CheckResult]`, and `required_semantic_criteria: set[str]`. `TrialContext` supplies disposable PostgreSQL repository, three clocks, bound actor, gateways, barriers, and selected system (baseline/coordinator). `OutcomeSnapshot` contains read-only persisted state, trace, visible messages, and actual provider/model counters. `CheckResult` contains check_id, pass/fail, safe evidence, and failure detail. The runner awaits setup before drive; assert_outcome stays synchronous over the captured snapshot. This is the stable protocol shared by public and trusted external registries; evaluator-only code never enters runtime model context.
 
 Every executable case resolves to:
 
@@ -47,7 +49,7 @@ Use event barriers, injected transports, and a fake clock for races/timeouts. Do
 
 ## Grading rules
 
-**Deterministic graders** independently inspect persisted state and independently computed expectations for arithmetic, scopes, counts, citations, source types, versions, hashes, stale approval, duplicates, cancellation, budgets, and actual committed effects. Read-only snapshots from a separate database connection are suitable. Do not grade by calling the production validation function again or trusting the assistant's final message.
+**Deterministic graders** independently inspect persisted state and independently computed expectations for arithmetic, scopes, counts, citations, source types, versions, hashes, stale approval, duplicates, cancellation, budgets, and actual committed effects. Read-only snapshots from a separate PostgreSQL connection are suitable. Do not grade by calling the production validation function again or trusting the assistant's final message.
 
 For controlled listing templates, independently map allowed template IDs to required subject fact paths, then inspect the rendered values and citations. Include a mutation that changes rendered `3 bedrooms` to `4 bedrooms` without changing citations; the grader must fail. A schema or citation-presence check alone misses this.
 
@@ -134,12 +136,12 @@ Implement these additional commands:
 ```bash
 uv run python -m uplisted.evals score --report reports/model-comparison --labels /absolute/evaluator/human-labels.jsonl
 uv run python -m uplisted.evals import-browser --report reports/browser --results web/test-results/scenario-results.json
-uv run python -m uplisted.evals finalize --coverage evals/coverage.json --report reports/service --report reports/model-comparison --report reports/browser --output reports/release
+uv run python -m uplisted.evals finalize --profile local --coverage evals/coverage.json --report reports/service --report reports/model-comparison --report reports/browser --output reports/local-milestone
 ```
 
 `run` writes `pending_semantic.jsonl` for required semantic checks. Each human-label row is `{trial_id, output_hash, criterion_id, verdict, evidence, reviewer_id, rubric_version}`. Verdict is `pass|fail|not_applicable`; not_applicable requires an explanation and must match the case's applicability rules. Scores must match the output hash, known trial/criterion, and rubric version. Reject unknown IDs, duplicates, missing required scores, and changed outputs. Imported scores may not overwrite prior labels silently; an adjudication record references the superseded label and rationale. Pending required labels cause exit 3, not success.
 
-The browser adapter writes `scenario-results.json` as `{schema_version, code_revision, provider_modes, results:[{scenario_id, test_name, status, evidence_path}]}` from actual Playwright test outcomes. `status` is `passed|failed|skipped`; skipped is incomplete. A synthetic file saying “passed” is not acceptable evidence. Keep raw Playwright output alongside it. Validate code revision and offline modes on import; missing tests or mismatched revision remain incomplete. D30 represents the required browser scenario family; its associated checks must all pass, not merely one representative test.
+The browser adapter writes `scenario-results.json` as `{schema_version, code_revision, runtime_bundle_hash, provider_modes, results:[{scenario_id, test_name, status, evidence_path}]}` from actual Playwright test outcomes. `status` is `passed|failed|skipped`; skipped is incomplete. A synthetic file saying “passed” is not acceptable evidence. Keep raw Playwright output alongside it. Validate runtime_bundle_hash and offline modes on import; retain code revision as provenance. Missing tests or incompatible runtime fingerprints remain incomplete, even if the human-facing version label matches. D30 represents the required browser scenario family; its associated checks must all pass, not merely one representative test.
 
 `finalize` reconciles trial IDs, configuration/code/fixture compatibility, coverage, semantic score completeness, and the manifest's named critical checks. Case builders must emit those exact check IDs; absent checks are incomplete. An agent attempting a forbidden action that the server correctly blocks is reported as a harmful proposal, not a committed-control failure. Output separates `execution_complete`, `critical_controls_passed`, `model_quality_results`, and `generalization_evidence`. A completed comparison with observed model-quality failures remains reportable and exits 1 under the default all-required-checks gate; it is not erased. If a later product release uses a statistical quality threshold, version that threshold before the final run and report its rationale. Unknown/missing coverage is exit 3; invalid incompatible manifests are exit 2. Never treat a report being generated as proof of passing quality.
 
@@ -157,3 +159,40 @@ Fill in only after execution:
 Then list failed scenario IDs, one root-cause analysis, mitigation commit, independent regression result, holdout status, grader calibration result, and remaining limitations. Keep the original failing trial. The project talk should show that chain of evidence rather than only a green aggregate.
 
 Microsoft's evaluator taxonomy separates task completion/adherence from tool selection/input/output behavior; it is a useful comparison vocabulary, not a requirement to adopt every hosted evaluator. [Microsoft Foundry agent evaluators](https://learn.microsoft.com/en-us/azure/foundry/concepts/evaluation-evaluators/agent-evaluators).
+
+
+## Azure acceptance and managed-agent evidence
+
+The 30 development cases remain application/model tests. The additional ten cases in `evals/cloud/scenarios.jsonl` are deployment checks and **do not increase the model-quality sample count**. The cloud suite uses a separate runner with explicit `--allow-cloud`; any live inference additionally requires `--allow-live` and the configured cap. Default offline CI never loads Azure credentials or sends traffic to cloud endpoints. Register cloud scenario drivers separately from the local CASE_REGISTRY.
+
+Implement:
+
+```bash
+uv run python -m uplisted.evals cloud --suite evals/cloud/scenarios.jsonl --deployment-manifest reports/azure/deployment.json --allow-cloud --allow-live --output reports/cloud
+uv run python -m uplisted.evals finalize --profile azure --coverage evals/coverage.json --report reports/service --report reports/model-comparison --report reports/browser --report reports/cloud --lab-report reports/foundry-lab/summary.json --output reports/azure-release
+```
+
+These are future implementation commands, not commands executed by this instruction update. Cloud tests operate on explicitly seeded synthetic cases. Fault/revision tests use an operator-controlled fixture process or migration/test Job inside the approved environment; do not deploy a publicly callable fault/role-edit endpoint. Tests requiring a signed-in unlisted actor can use an owner-supplied test identity or temporarily remove the test actor's membership for the synthetic test case and restore it; do not create tenant users or broadly grant permissions as an implicit workaround.
+
+The deployment manifest records subscription/resource group/region, resource IDs, container image digest/revision, code revision, schema version, auth mode, identity object IDs, model deployment/version and fixture mode. No secrets/tokens. Cloud result rows include `scenario_id`, named checks, observed pass/fail/incomplete, timestamps, actual deployment fingerprint, safe evidence references and any live cost. SDK mocks or a deployment command exit code cannot substitute for these observations.
+
+`finalize --profile local` reports only an **intermediate local/model milestone**; it explicitly leaves `azure_deployment_verified=false` and `managed_agent_lab_verified=false`. `--profile azure` also requires every cloud case, the manifest's named critical cloud checks, and a valid lab receipt. If any cloud/lab evidence is missing, the overall Azure milestone is incomplete (exit 3), even if offline tests pass. A cloud failure is separate from model-quality failure and does not alter that metric's denominator.
+
+Lab receipt schema: `schema_version`, code_revision, sdk_versions, project_resource_id, agent_name/version, model_deployment, three case IDs with output hashes and check results, trace references, client-attempt counts, known/unknown cost, resource IDs created, cleanup results and remaining resources. It must describe actual service invocation, not just a direct Azure model response. Validate its referenced artifact hashes and version compatibility when importing; no fabricated completion fields.
+
+Additional required independent tests: forged/missing platform identity, signed-in nonmember, cloud startup with local auth, expired database ownership, healthy old revision during startup, fence loss before commit, model Entra permission denial/token refresh, private database/TLS configuration, model/provider secrets absent from telemetry, and cleanup inventory not targeting shared resources. Advisory diagnostics and sampled traces do not replace authoritative PostgreSQL state assertions.
+
+Add cloud and managed-agent rows to the final report with status and evidence links, rather than merging them into task-success percentages. For the talk, state the difference between the custom coordinator running on Azure and the managed prompt-agent lab. The Azure prototype is complete only when Stage 17 deployment and Stage 18 lab have actual evidence; no change to a label can turn a local replay into cloud validation.
+
+
+## Final evidence compatibility and Stage 19 reconciliation
+
+Stage 14 results are a development comparison. Stages 15–16 change identity, persistence/ownership integration and instrumentation; do not silently reuse old model/browser results as final-release evidence. Stage 19 owns the `finalize --profile azure` reconciliation.
+
+Define `runtime_bundle_hash` over canonical sorted path/content hashes for runtime `src/`, frontend `web/src/`, prompt/schema/template resources used at runtime, SQL migrations, runtime configuration schema, Dockerfile, pyproject/uv.lock, and web package/lock/build configuration. Exclude docs, reports, test results, timestamps and secrets. Record the exact included-path manifest. Keep `code_revision` and dirty-state flag too. A docs-only commit may retain compatible runtime evidence when this fingerprint is identical; matching a version string alone is insufficient.
+
+Cloud reports also bind image digest, deployment/config fingerprint and schema migration version. Config fingerprints use only allowlisted nonsecret values; never hash/export secret values as though a hash makes them safe. Actual environment differences explicitly declared by the test profile (local loopback versus Azure auth, scripted versus live, fixed versus coordinator) are labeled and compared within their intended groups, not treated as silent equivalents.
+
+Any runtime fingerprint change requires the required final deterministic/browser/model checks to run on the new snapshot before an Azure release claim. Deployment/auth/IAM/network/runtime-config changes additionally require affected cloud checks against the resulting deployment. Replacing model/version/prompt/decoding settings requires new matching model trials. Lab evidence binds its own runner/dependency/input/prompt fingerprint plus actual service/model versions; changes to those require rerunning the lab, while unrelated product UI-only changes do not retroactively claim a lab change. Record this compatibility decision in finalization.
+
+Finalization fails incomplete if required evidence has an incompatible fingerprint, missing scores, skipped checks or an unverified managed-agent receipt. Keep original historical failures/comparisons; do not overwrite them. Budget the final rerun explicitly before starting a paid batch. No past green score can waive an applicable control check.

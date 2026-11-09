@@ -9,13 +9,13 @@ The user has authorized you to start implementing this project's existing specif
 3. `docs/01-product-brief.md`; the relevant sections of `docs/02-contracts.md` and `docs/04-evaluation-plan.md`.
 4. The current stage's prompt and learning section from the stage mapping.
 
-The canonical stage text is in `docs/03-build-plan.md`; each matching file in `prompts/` contains the same instructions. Implementation decisions are already documented. Resolve routine details yourself within those contracts. Ask only when a concrete conflict cannot be resolved from them.
+Also read `docs/06-azure-architecture.md` before architecture decisions, and `docs/07-foundry-agent-lab.md` for Stage 18. Azure is required, not a future extension. The canonical stage text is in `docs/03-build-plan.md`; each matching file in `prompts/` contains the same instructions. Implementation decisions are already documented. Resolve routine details yourself within those contracts. Ask only when a concrete conflict cannot be resolved from them.
 
 ## Start work, do not stop at orientation
 
 Briefly explain this stage's purpose, what currently exists, and what you will add. Run `./scripts/with-tools.sh python scripts/doctor.py`. The prepared Node/Python tools are local to this project; do not upgrade or replace global runtimes. Run stage commands through `./scripts/with-tools.sh` so each terminal call uses the correct PATH.
 
-Implement Stage 01 now if nothing is implemented. Preserve the ready-folder README's learning links when adding actual run/build commands. Do not overwrite the prepared workspace/tooling or mark later features implemented. Install only dependencies needed for the current stage, then pin them in the planned lockfiles.
+Implement Stage 01 now if nothing is implemented. Preserve the ready-folder README's learning links when adding actual run/build commands. Do not overwrite the prepared workspace/tooling or mark later features implemented. Install only dependencies needed for the current stage, then pin them in the planned lockfiles. Stage 01 prepares Docker Compose for PostgreSQL; Azure credentials are not needed until Stage 13. Do not create Azure resources while starting Stage 01.
 
 ## Finish with a learning checkpoint
 
@@ -31,4 +31,4 @@ Record learning as explained, not automatically understood. Stop after this sing
 
 ## Preserve the project boundaries
 
-One contained screen, one coordinator, seven tools, typed/domain validation, immutable state, exact-version human approval, no external publication, and fixture/scripted providers initially. The real-model evaluation milestone requires separately configured runtime access later. A passing scripted demo cannot establish model reliability. All result tables remain unfilled until actually measured.
+One contained screen, one coordinator, seven tools, typed/domain validation, immutable state, exact-version human approval, no external publication, and fixture/scripted providers initially. The real-model milestone uses Azure OpenAI in Microsoft Foundry. Later stages implement Azure identity, infrastructure, deployment, telemetry and a separate Foundry Agent Service lab. Account/region/quota/budget inputs are documented in docs/AZURE-OWNER-SETUP.md; obtain missing values only when required. A passing scripted demo cannot establish model reliability. All result tables remain unfilled until actually measured.

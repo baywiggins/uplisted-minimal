@@ -31,6 +31,7 @@ def command_version(name: str, args: list[str]) -> tuple[bool, str]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--write-report', action='store_true')
+    parser.add_argument('--azure', action='store_true', help='Also require Azure CLI; does not sign in or access an account')
     args = parser.parse_args()
     checks: list[tuple[str, bool, str]] = []
     for name, flags, pattern in [
@@ -39,19 +40,28 @@ def main() -> int:
         ('node', ['--version'], r'^v24\.'),
         ('npm', ['--version'], r'^\d+\.'),
         ('python', ['--version'], r'^Python 3\.12\.'),
+        ('docker', ['--version'], r'^Docker version '),
     ]:
         ok, output = command_version(name, flags)
         checks.append((name, ok and bool(re.search(pattern, output)), output))
+    compose_ok, compose_version = command_version('docker', ['compose', 'version', '--short'])
+    checks.append(('Docker Compose', compose_ok, compose_version))
+    azure_cli_available = shutil.which('az') is not None
+    if args.azure:
+        azure_ok, azure_version = command_version('az', ['--version'])
+        checks.append(('Azure CLI', azure_ok, azure_version))
     checks.append(('standalone Git repository', (ROOT / '.git').is_dir(), 'local repository; no remote required'))
     for path in ['COPILOT-START.md', 'AGENTS.md', '.github/copilot-instructions.md',
                  '.env.example', 'docs/03-build-plan.md', 'learning/stages.json',
-                 'evals/dev/scenarios.jsonl', 'uplisted-interview.code-workspace']:
+                 'evals/dev/scenarios.jsonl', 'evals/cloud/scenarios.jsonl',
+                 'docs/06-azure-architecture.md', 'docs/07-foundry-agent-lab.md',
+                 'uplisted-interview.code-workspace']:
         checks.append((path, (ROOT / path).is_file(), 'file present' if (ROOT / path).is_file() else 'missing file'))
     try:
         stages = json.loads((ROOT / 'learning/stages.json').read_text())['stages']
-        valid = len(stages) == 15 and [s['stage'] for s in stages] == [f'{n:02}' for n in range(1, 16)]
+        valid = len(stages) == 19 and [s['stage'] for s in stages] == [f'{n:02}' for n in range(1, 20)]
         valid = valid and all((ROOT / row[key]).is_file() for row in stages for key in ('section', 'prompt', 'checkpoint'))
-        checks.append(('learning map', valid, '15 ordered stages with existing sections/prompts/checkpoints'))
+        checks.append(('learning map', valid, '19 ordered stages with existing sections/prompts/checkpoints'))
     except (OSError, ValueError, KeyError, TypeError):
         checks.append(('learning map', False, 'invalid or unreadable stage mapping'))
     app = Path('/Applications/Visual Studio Code.app')
@@ -68,7 +78,9 @@ def main() -> int:
     for name, ok, detail in checks:
         print(f'{"PASS" if ok else "FAIL"} | {name} | {detail}')
     passed = all(ok for _, ok, _ in checks)
-    print('Application implementation/tests: not started by this folder setup.')
+    print('Azure CLI: ' + ('available; account not checked' if azure_cli_available else 'not installed; required before Stage 13, not before local stages'))
+    print('Docker daemon/image readiness is verified by Stage 01, not by version checks.')
+    print('Application implementation/tests and Azure deployment: not started by this instruction update.')
     if args.write_report:
         stamp = datetime.now(timezone.utc).isoformat()
         lines = ['# Prepared folder: setup verification', '', f'Checked at {stamp}.', '',
@@ -79,10 +91,14 @@ def main() -> int:
                   '- Node 24 is installed under ignored `.tools/`; global Node settings are unchanged.',
                   '- Python 3.12 is linked to the existing uv-managed installation.',
                   '- Copilot account sign-in and VS Code workspace trust remain editor-controlled; no account or approval setting was changed.',
-                  '- Application dependencies, source code, lockfiles, and tests are intentionally left to Copilot Stage 01 onward.',
+                  '- Application dependencies, source code, lockfiles, database/image setup and tests are left to Copilot Stage 01 onward.',
+                  '- Docker/Compose version checks do not prove the daemon is running or a PostgreSQL image has been pulled.',
+                  '- Azure CLI: ' + ('available; account not checked.' if azure_cli_available else 'not installed; required before Stage 13.'),
+                  '- Azure tenant/subscription/model/permissions/budget/reviewer inputs are not configured; see AZURE-OWNER-SETUP.md.',
+                  '- No Azure resource was created or deployed by this instruction update.',
                   '- No model/RentCast credentials were read or configured, and no paid provider was invoked.',
-                  '- All 15 application stages remain not started until Copilot implements and verifies them.', '',
-                  'Rerun: `./scripts/with-tools.sh python scripts/doctor.py`.', '']
+                  '- All 19 application stages remain not started until Copilot implements and verifies them.', '',
+                  'Rerun local checks: `./scripts/with-tools.sh python scripts/doctor.py`. Require Azure CLI too: add `--azure`.', '']
         (ROOT / 'docs/SETUP-STATUS.md').write_text('\n'.join(lines))
     return 0 if passed else 1
 
