@@ -1,9 +1,16 @@
 {
-  "schema_version": 2,
-  "expected_stage_count": 19,
+  "schema_version": 3,
+  "expected_stage_count": 20,
   "workflow": "one_stage_then_explain_and_stop",
   "deployment_target": "azure",
   "stages": [
+    {
+      "stage": "00",
+      "title": "Orientation and MAF mental model",
+      "section": "learning/sections/00-orientation.md",
+      "prompt": "prompts/00-start.md",
+      "checkpoint": "learning/checkpoints/00.md"
+    },
     {
       "stage": "01",
       "title": "Bootable project and reproducible commands",
@@ -137,5 +144,6 @@
       "prompt": "prompts/19-clean-checkout-verification-and-rehearsal.md",
       "checkpoint": "learning/checkpoints/19.md"
     }
-  ]
+  ],
+  "agent_framework": "microsoft-agent-framework"
 }

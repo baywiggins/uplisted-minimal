@@ -212,3 +212,7 @@ For implementation, use [Azure OpenAI v1](https://learn.microsoft.com/en-us/azur
 After actual implementation, open the authenticated HTTPS app and identify the deployed revision/image. Show one Azure model call in the correlated trace, one DB-backed stale/expired-owner rejection, and the difference between the human reviewer and managed workload identity. Then show the small Foundry Agent Service comparison and explain that it is a separate experiment, not a second production agent.
 
 Report [actual region/model deployment], [identity scope], [cloud acceptance outcomes], [known/unknown spend], and [cleanup status]. Leave those values unfilled until measured. If Azure access was unavailable, state that the cloud milestone is incomplete; do not present the local backup as a deployment.
+
+## Required Microsoft Agent Framework
+
+The main agent uses MAF for model/tool orchestration from Stage 01, with a scripted framework client before Azure access. Application services enforce permissions, budgets, validation and approval. Begin with Stage 00 orientation. See [MAF runtime contract](08-microsoft-agent-framework.md).

@@ -24,13 +24,13 @@ Run three labeled cases:
 - Ask to approve or publish: no such effect or tool is available; report any attempted forbidden call separately.
 - Return a malicious note inside the tool data: verify it does not create authority and assess the final answer for unsupported claims.
 
-Limits: three tool dispatch attempts, six client model/response requests, a 90-second client deadline, and an owner-configured estimated lab spend cap. Disable automatic client retries. If the service performs internal work whose count/cost is not exposed, record it as unknown rather than claiming the custom coordinator's exact accounting applies. Keep Azure/model/SDK/agent-version IDs and the trace, with sensitive content capture disabled.
+Limits: three tool dispatch attempts, six client model/response requests, a 90-second client deadline, and an owner-configured estimated lab spend cap. Disable automatic client retries. If the service performs internal work whose count/cost is not exposed, record it as unknown rather than claiming the MAF-backed runtime's exact accounting applies. Keep Azure/model/SDK/agent-version IDs and the trace, with sensitive content capture disabled.
 
-Compare the same three tasks to the application-owned loop. The resulting table should identify who owns conversation state, tool execution, retries, iteration limits, identity, traces, lifecycle and cleanup. Do not treat a different runtime's successful reply as evidence that the original app's approval/lease invariants passed.
+Compare the same three tasks to the application-hosted MAF loop. The resulting table should identify who owns conversation state, tool execution, retries, iteration limits, identity, traces, lifecycle and cleanup. Do not treat a different runtime's successful reply as evidence that the original app's approval/lease invariants passed.
 
-## Optional framework extension
+## Compare with the required main MAF agent
 
-After the managed-agent experiment works, implement the same read-only example with Microsoft Agent Framework's currently supported Foundry integration. Verify package/API status at implementation; use the current `Agent` / `FoundryChatClient` quickstart rather than assuming all packages are preview or all integrations are released. Inspect whether automatic tool invocation/retries bypass your desired counters. This extension is optional; the actual managed prompt-agent experiment is the required Azure learning milestone. [Framework/Responses quickstart](https://learn.microsoft.com/en-us/azure/foundry/agents/quickstarts/responses-api).
+The main app already uses MAF from Stage 01. This lab compares application-hosted MAF orchestration with a managed Foundry prompt agent. Explain which service holds protocol state, where tools execute, how limits are observed and where authorization is enforced. MAF is required in the main app, not an optional extension here.
 
 ## Evidence and cleanup
 

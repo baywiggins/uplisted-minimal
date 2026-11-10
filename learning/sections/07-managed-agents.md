@@ -16,7 +16,7 @@ Versioned Foundry prompt agent → function_call → bounded client dispatcher �
 
 ## Check your understanding
 
-1. Which parts of your custom coordinator are now handled by the service, and which still belong to your client?
+1. Which parts of your MAF-backed runtime are now handled by the service, and which still belong to your client?
 2. Why does a managed agent definition not grant a function permission to approve or publish?
 
 ## Interview takeaway

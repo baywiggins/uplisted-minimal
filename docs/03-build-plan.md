@@ -4,18 +4,18 @@
 
 **Goal:** Build an inspectable rental-listing assistant and produce trustworthy evidence about task completion, tool use, and risk.
 
-**Architecture:** One React workspace calls FastAPI locally and on Azure Container Apps. A small coordinator proposes actions through seven typed tools; deterministic services enforce scope, versions, budgets, validation, and human approval. PostgreSQL stores immutable state, run ownership, ordered events and approvals; Azure OpenAI supplies the model.
+**Architecture:** One React workspace calls FastAPI locally and on Azure Container Apps. A Microsoft Agent Framework Agent manages the model/tool loop through seven typed function tools; deterministic services enforce scope, versions, budgets, validation, and human approval. PostgreSQL stores immutable state, run ownership, ordered events and approvals; Azure OpenAI supplies the model.
 
-**Tech stack:** Python 3.12, FastAPI/Pydantic 2, PostgreSQL 16/psycopg 3, Docker Compose, React/TypeScript/Vite, uv/npm, pytest/Ruff/mypy, Vitest/Testing Library/Playwright, Azure CLI/Bicep, Container Apps, Foundry/Azure OpenAI and Entra ID. The real-model adapter is required for final model evaluation; live RentCast is optional. Both remain isolated and disabled until explicitly configured.
+**Tech stack:** Python 3.12, Microsoft Agent Framework, FastAPI/Pydantic 2, PostgreSQL 16/psycopg 3, Docker Compose, React/TypeScript/Vite, uv/npm, pytest/Ruff/mypy, Vitest/Testing Library/Playwright, Azure CLI/Bicep, Container Apps, Foundry/Azure OpenAI and Entra ID. The real-model adapter is required for final model evaluation; live RentCast is optional. Both remain isolated and disabled until explicitly configured.
 
-**Spec:** `docs/01-product-brief.md`, `docs/02-contracts.md`, and `docs/04-evaluation-plan.md`, `docs/06-azure-architecture.md` and `docs/07-foundry-agent-lab.md` travel with this plan.
+**Spec:** `docs/01-product-brief.md`, `docs/02-contracts.md`, and `docs/04-evaluation-plan.md`, `docs/06-azure-architecture.md` and `docs/07-foundry-agent-lab.md`, plus `docs/08-microsoft-agent-framework.md`, travel with this plan.
 
 ## Global constraints
 
 - Single route and current case; persistent assistant; no wizard or dashboard.
 - Required Azure HTTPS deployment and managed-agent learning lab; local-only is an intermediate milestone.
 - PostgreSQL locally/in Azure; Entra-protected cloud access; durable owner/lease/fence checks during revision overlap.
-- One coordinator, seven tools, serial tools, one active run per case.
+- One MAF agent, seven tools, serial tools, one active run per case.
 - Fixtures/scripted mode by default; live provider/model mode separately configured and labeled.
 - Confirmed facts, external evidence, and generated assumptions stay separate.
 - Immutable artifacts; exact dependency and target-head checks on acceptance.
@@ -41,16 +41,35 @@ At the gate, run the stage's commands and inspect actual output. Keep `docs/BUIL
 
 ---
 
+## Stage 00 — Orientation and MAF mental model
+
+**Files:** update only `docs/BUILD-PROGRESS.md` and `learning/checkpoints/00.md` after this stage is actually conducted.
+
+**Consumes:** COPILOT-START, product brief, MAF runtime contract, learning/sections/00-orientation.md.
+
+**Produces:** an explained architecture and prerequisite report, without application implementation.
+
+- [ ] Explain agent versus model versus tool using an Uplisted example. Define MAF, Azure OpenAI, and Foundry Agent Service separately.
+- [ ] Walk through user request → MAF agent → validated tool → evidence/artifact → human review. Explain why the framework does not prove factual correctness or grant permissions.
+- [ ] Explain scripted mode and why it uses the actual MAF runtime with a fake model client.
+- [ ] Run `./scripts/with-tools.sh python scripts/doctor.py`. Report missing prerequisites accurately. Azure account knowledge is not required now.
+- [ ] Explain the upcoming stages and ask one optional understanding question only after teaching its answer through a concrete example. If the learner does not know, explain and practice; do not require outside study.
+
+**Gate:** prerequisite command output inspected; orientation recorded as explained, never automatically understood. No product code, dependencies, migrations or cloud resources created.
+
+**Interview focus:** Identify which responsibilities belong to the framework, model, application and human.
+
 ## Stage 01 — Bootable project and reproducible commands
 
-**Files:** create root `pyproject.toml`, `uv.lock`, `.python-version`, `.node-version`, `.gitignore`, `.env.example`, `README.md`; `src/uplisted/__init__.py`, `config.py`, `api/app.py`; `tests/conftest.py`, `tests/unit/test_config.py`, `tests/integration/test_health.py`; `web/` Vite React TypeScript project and scripts; `docs/BUILD-PROGRESS.md`.
+**Files:** create root `pyproject.toml`, `uv.lock`, `.python-version`, `.node-version`, `.gitignore`, `.env.example`, `README.md`; `src/uplisted/__init__.py`, `config.py`, `api/app.py`; `tests/conftest.py`, `tests/unit/test_config.py`, `tests/integration/test_health.py tests/integration/test_maf_smoke.py`; `web/` Vite React TypeScript project and scripts; `docs/BUILD-PROGRESS.md`.
 
 **Consumes:** the copied handoff documents and official installation documentation.
 
 **Produces:** `create_app() -> FastAPI`, validated `Settings`, `/api/health`, the standard commands from contracts §1, and a frontend that renders one empty workspace route. No tool/provider functionality yet.
 
 - [ ] Inspect the empty target and copied docs; initialize Git if absent. Verify Python 3.12, Node 24, uv/npm and Docker/Compose versions. The prepared runtime wrapper remains in use. If tools are missing, report the exact prerequisite instead of executing an unrelated installer.
-- [ ] Resolve compatible stable dependency releases. Use FastAPI/Pydantic 2/httpx/uvicorn and the named test tools; prepare compose.yaml with a pinned PostgreSQL 16 image, loopback port 5433, health check and local-only credentials from the example; avoid extra runtime frameworks. Commit lockfiles and record exact installed versions. Use current official docs for syntax.
+- [ ] Resolve compatible stable dependency releases. Use FastAPI/Pydantic 2/httpx/uvicorn and the named test tools; prepare compose.yaml with a pinned PostgreSQL 16 image, loopback port 5433, health check and local-only credentials from the example; install Microsoft Agent Framework core and its compatible Responses provider package; avoid unrelated frameworks. Commit lockfiles and record exact installed versions. Use current official docs for syntax.
+- [ ] Add `agent/runtime.py` and `providers/scripted_chat_client.py` with a real MAF Agent offline smoke using one harmless fixture tool. Verify the installed public client-response interception and function middleware boundaries needed by docs/08; record exact package versions and signatures in `docs/MAF-SDK-NOTES.md`. This smoke is not the seven-tool product agent. Add `tests/integration/test_maf_smoke.py`; assert model → tool → result → final, no network, and serial invocation configuration.
 - [ ] Create fixture-safe configuration: `MODEL_MODE=scripted`, `RENTCAST_MODE=fixture`, loopback origin, local PostgreSQL connection, APP_ENV=local/AUTH_MODE=local_demo, empty Azure identifiers/live secrets, and no provider work during import/startup. Tests assert invalid mode rejection and safe defaults. Use a global test guard that blocks external sockets and allows only the configured loopback test database; HTTP adapters use injected mock transports. Container image/dependency downloads are setup, not test execution.
 - [ ] Implement `create_app` with readiness route and minimal frontend scripts. Health test asserts HTTP 200 and no credentials/machine paths. Do not add chat mock interactions that pretend to be a real agent.
 - [ ] Write start/install/check commands in README; run from a fresh environment using lockfiles. A separate terminal is required for each dev server.
@@ -191,8 +210,9 @@ At the gate, run the stage's commands and inspect actual output. Keep `docs/BUIL
 
 **Consumes:** exactly the seven tool argument contracts in §5 and the domain services. Provide a typed stub for `submit_for_review` that reports unavailable until Stage 11; do not fake a successful review.
 
-**Produces:** `ToolCall`, `ToolRegistry`, `dispatch_tool(ctx, call, budget) -> ToolResult`; durable ordered events and safe public projections.
+**Produces:** seven MAF function-tool wrappers, proposal-accounting middleware, `ToolCall`, `ToolRegistry`, `dispatch_tool(ctx, call, budget) -> ToolResult`; durable ordered events and safe public projections.
 
+- [ ] Wire wrappers and pre-parse proposal accounting through the public MAF extension points proven in Stage 01, following docs/08. Preserve one server attempt ID across interception and dispatcher, and test rejected unknown/malformed proposals consume budget even when MAF skips function middleware.
 - [ ] Generate tool input schemas from Pydantic, not separately maintained handwritten schemas. Register only the seven tools. Test injected `actor_id`, `case_id`, `role`, arbitrary URL, replacement facts, extra fields, and unknown tools are rejected.
 - [ ] Execute a shared order: count server-assigned tool attempt → allowlist → parse → scoped refs → monetary/provider reservation → domain execution → output checks → acceptance transaction → safe result. Test unknown/malformed and repeated provider-call-ID proposals consume allowances; replaying the same server attempt does not double-charge. Record proposed, blocked, started, and committed separately.
 - [ ] Bind command keys to server run/call/operation IDs; ledger replay is idempotent. Every artifact writer must use the shared acceptance gate.
@@ -207,10 +227,11 @@ At the gate, run the stage's commands and inspect actual output. Keep `docs/BUIL
 
 **Files:** create `agent/coordinator.py`, `agent/budget.py`, `agent/prompts.py`, `agent/baseline.py`; extend scripted gateway; `tests/integration/test_coordinator.py`, `test_budget.py`, `test_cancellation.py`, `test_baseline.py`, `test_run_ownership.py`.
 
-**Consumes:** dispatcher, repositories, model protocol, exact limits/run states in contracts §6.
+**Consumes:** dispatcher, repositories, MAF runtime contract, exact limits/run states in contracts §6.
 
 **Produces:** `Coordinator.run(ctx, request) -> RunOutcome`; `RunBudget.reserve_model(...)`, `reserve_tool(...)`, `record_usage(...)`, `check_deadline()`; `FixedWorkflow.run(ctx, request)`. Model reservations include helper and repair calls.
 
+- [ ] Implement Coordinator as a lifecycle adapter around MAF Agent.run, with no handwritten model/tool iteration. Use the real framework with ScriptedChatClient. Test public middleware hooks and terminal exception propagation; never mock away Agent.run.
 - [ ] Use scripted model turns to test read → tool → observation → final flow and an appropriate clarification. A model final message cannot create completion artifacts. Handle malformed/unknown calls and tool failures explicitly.
 - [ ] Enforce one active run per case, serial tool execution, call-ID correspondence, per-run opaque provider continuation state, max attempts, deadline, and at most one repair. Test a helper consumes the last model allowance; further repair/coordinator calls are blocked.
 - [ ] Cancellation sets a durable flag, halts further dispatch, and blocks late acceptance. Barrier tests cover cancel before dispatch, while provider in flight, and after one artifact committed. Retain successful earlier artifacts.
@@ -218,7 +239,7 @@ At the gate, run the stage's commands and inspect actual output. Keep `docs/BUIL
 - [ ] Implement a fair fixed baseline supporting narrow task categories. It shares tools, helper settings and guardrails; do not fetch RentCast for photos-only. Unknown intent asks a bounded clarification.
 - [ ] Write system instructions describing tools, untrusted data, factual limits, progress honesty, and clarification. Keep them versioned and hashed. Do not put grading labels or scenario-specific answers in prompts.
 
-**Gate:** `uv run pytest -q tests/integration/test_coordinator.py tests/integration/test_budget.py tests/integration/test_cancellation.py tests/integration/test_baseline.py tests/integration/test_run_ownership.py`; all prior backend tests. Use fake clocks and event barriers, no long sleeps.
+**Gate:** `uv run pytest -q tests/integration/test_maf_smoke.py tests/integration/test_coordinator.py tests/integration/test_budget.py tests/integration/test_cancellation.py tests/integration/test_baseline.py tests/integration/test_run_ownership.py`; all prior backend tests. Use fake clocks and event barriers, no long sleeps.
 
 **Interview focus:** Explain where the agent has discretion, why serial execution is sufficient, how nested costs accumulate, and when a fixed workflow is preferable.
 
@@ -245,7 +266,7 @@ At the gate, run the stage's commands and inspect actual output. Keep `docs/BUIL
 
 **Files:** create `evals/__main__.py`, `schema.py`, `runner.py`, `graders.py`, `report.py`; `tests/evals/test_scenarios.py`, `test_harness.py`, `test_graders.py`; scenario builder/driver modules under `src/uplisted/evals/cases/`; `docs/GRADER-CALIBRATION.md`.
 
-**Consumes:** all 30 public scenario specifications, the fixed baseline, scripted coordinator, outcome snapshots, and the complete evaluation plan.
+**Consumes:** all 30 public scenario specifications, the fixed baseline, scripted MAF agent, outcome snapshots, and the complete evaluation plan.
 
 **Produces:** validated CASE_REGISTRY, typed executable cases, CLI commands, resettable isolated trials, independent deterministic graders, redacted reports, and optional human scoring forms.
 
@@ -264,11 +285,11 @@ At the gate, run the stage's commands and inspect actual output. Keep `docs/BUIL
 
 **Files:** implement `providers/azure_openai_gateway.py`; finish optional live `providers/rentcast.py`; extend config; `tests/integration/test_model_adapter.py`, `test_live_mode_guards.py`; `infra/model.bicep`, model parameter example; `scripts/azure/model-preflight.sh`; `docs/LIVE-SETUP.md`.
 
-**Consumes:** ModelGateway/structured helper protocols, current Microsoft v1 SDK docs, owner Azure choices, a supported deployed model and the existing shared budget/attempt ledger. Read `docs/06-azure-architecture.md` before touching cloud access.
+**Consumes:** MAF client/StructuredGenerator protocols, current Microsoft v1 SDK docs, owner Azure choices, a supported deployed model and the existing shared budget/attempt ledger. Read `docs/06-azure-architecture.md` before touching cloud access.
 
-**Produces:** AzureOpenAIModelGateway using `openai`/`azure-identity`, original call-ID tool round trips, schema-validated structured output, actual Azure-model evidence with fixture property data. Live RentCast remains a separately optional adapter.
+**Produces:** Azure-configured MAF Responses client using the pinned framework provider and `azure-identity`, original call-ID tool round trips, schema-validated structured output, actual Azure-model evidence with fixture property data. Live RentCast remains a separately optional adapter.
 
-- [ ] Resolve and pin compatible SDK versions. Use Azure's `/openai/v1/` endpoint, the actual deployment name, Entra credentials and current documented token audience. Keep opaque protocol continuation items if required; do not expose reasoning. Disable retries. Validate truncation, errors, nullable usage, function-call IDs and function-call outputs with synthetic SDK-shaped adapter tests.
+- [ ] Follow docs/08 and the installed MAF provider docs. Keep the same MAF agent, wrappers and policy hooks used offline; change only the client factory. Verify explicit Azure routing even if an unrelated OPENAI_API_KEY exists. Resolve and pin compatible SDK versions. Use Azure's `/openai/v1/` endpoint, the actual deployment name, Entra credentials and current documented token audience. Keep opaque protocol continuation items if required; do not expose reasoning. Disable retries. Validate truncation, errors, nullable usage, function-call IDs and function-call outputs with synthetic SDK-shaped adapter tests.
 - [ ] Prepare `infra/model.bicep` for the Foundry resource/project and chosen model deployment, or reference explicitly approved existing resources. Verify region/model/quota and dated rates. Prepare the cost/scope/what-if plan before collecting any missing owner choices; never assume the CLI default subscription is approved. Do not hard-code a catalog model name as a deployment name.
 - [ ] When the owner has authorized this stage with required account/scope/spend values, provision only its model resources or reuse the specified deployment. Use resource-scoped inference permission for local developer identity; provisioning roles are distinct. Store identifiers, not keys, in local configuration. If access/permission is missing, report the exact blocker and leave live evidence incomplete.
 - [ ] Test one actual response, a client-tool request/result loop, one structured helper output, and a forced budget stop against Azure. Then run the existing agent evaluation with frozen evidence, real execution clocks, and fixed fixture-domain time. Record actual model/deployment/version/region and unknown telemetry.
@@ -362,8 +383,8 @@ At the gate, run the stage's commands and inspect actual output. Keep `docs/BUIL
 
 - [ ] Use the current supported new-project SDK/API and the project endpoint, not the direct model endpoint. Pin versions and verify role scope before creating the lab agent. Keep all production write/approval tools absent.
 - [ ] Create the versioned prompt agent and implement the bounded function-call/output client loop. Test names/arguments/call IDs and disallowed function handling offline before live execution.
-- [ ] Run the known-facts, forbidden-approval, and injected-tool-text scenarios. Record actual output/trace and limits, including unknown internal service work/cost. Compare with the custom coordinator on the same inputs.
-- [ ] Write who owns conversation, tools, retries, iteration limits, identity, tracing and cleanup in each design. An optional Agent Framework version may follow, but it must not silently replace the production loop or its budgets.
+- [ ] Run the known-facts, forbidden-approval, and injected-tool-text scenarios. Record actual output/trace and limits, including unknown internal service work/cost. Compare with the main MAF-backed runtime on the same inputs, identifying framework versus hosted-service responsibilities.
+- [ ] Write who owns conversation, tools, retries, iteration limits, identity, tracing and cleanup in each design. The main product already uses MAF; compare that framework-hosted runtime with the managed service using actual traces.
 - [ ] Delete only the exact lab-owned agent/version/conversations captured in its manifest once results are saved; verify cleanup or state what remains. Retain the application/model resources needed for the interview.
 
 **Gate:** offline boundary tests pass; actual Agent Service resource/invocation evidence and the three-case comparison exist; lab lifecycle/cleanup is recorded. A direct model response does not satisfy this managed-agent milestone.

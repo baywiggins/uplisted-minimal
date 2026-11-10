@@ -182,7 +182,7 @@ Lab receipt schema: `schema_version`, code_revision, sdk_versions, project_resou
 
 Additional required independent tests: forged/missing platform identity, signed-in nonmember, cloud startup with local auth, expired database ownership, healthy old revision during startup, fence loss before commit, model Entra permission denial/token refresh, private database/TLS configuration, model/provider secrets absent from telemetry, and cleanup inventory not targeting shared resources. Advisory diagnostics and sampled traces do not replace authoritative PostgreSQL state assertions.
 
-Add cloud and managed-agent rows to the final report with status and evidence links, rather than merging them into task-success percentages. For the talk, state the difference between the custom coordinator running on Azure and the managed prompt-agent lab. The Azure prototype is complete only when Stage 17 deployment and Stage 18 lab have actual evidence; no change to a label can turn a local replay into cloud validation.
+Add cloud and managed-agent rows to the final report with status and evidence links, rather than merging them into task-success percentages. For the talk, state the difference between the MAF-backed runtime running on Azure and the managed prompt-agent lab. The Azure prototype is complete only when Stage 17 deployment and Stage 18 lab have actual evidence; no change to a label can turn a local replay into cloud validation.
 
 
 ## Final evidence compatibility and Stage 19 reconciliation
@@ -196,3 +196,7 @@ Cloud reports also bind image digest, deployment/config fingerprint and schema m
 Any runtime fingerprint change requires the required final deterministic/browser/model checks to run on the new snapshot before an Azure release claim. Deployment/auth/IAM/network/runtime-config changes additionally require affected cloud checks against the resulting deployment. Replacing model/version/prompt/decoding settings requires new matching model trials. Lab evidence binds its own runner/dependency/input/prompt fingerprint plus actual service/model versions; changes to those require rerunning the lab, while unrelated product UI-only changes do not retroactively claim a lab change. Record this compatibility decision in finalization.
 
 Finalization fails incomplete if required evidence has an incompatible fingerprint, missing scores, skipped checks or an unverified managed-agent receipt. Keep original historical failures/comparisons; do not overwrite them. Budget the final rerun explicitly before starting a paid batch. No past green score can waive an applicable control check.
+
+## MAF execution requirement
+
+All scripted-agent and live-agent trials run the same real MAF Agent pipeline. Only the client/provider mode changes. Never replace Agent.run with a fake orchestration loop. Record exact MAF core/provider versions in each run manifest and include lockfiles in runtime_bundle_hash. FixedWorkflow is deliberately deterministic and shares domain services, policy enforcement and tools-disabled MAF structured helpers. Distinguish baseline from MAF agent in every report. Add integration regressions for pre-parse blocked proposals, duplicated provider call IDs, hidden retries, shared nested budgets, cancellation/lease loss, and session isolation. Framework-reported success is not an independent grader.

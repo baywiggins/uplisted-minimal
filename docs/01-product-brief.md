@@ -35,9 +35,9 @@ Require an Azure deployment with Microsoft Foundry model access, Container Apps,
 
 Use Python 3.12, FastAPI, Pydantic 2, PostgreSQL 16 with psycopg 3 and a bounded connection pool, and explicit repositories/services. Use a local Docker Compose database and Azure Database for PostgreSQL Flexible Server, avoiding a second SQL dialect. Use React, TypeScript in strict mode, and Vite for the frontend. Use `uv` and npm lockfiles, pytest/Ruff/mypy, Vitest/Testing Library, and Playwright. Resolve compatible library versions at bootstrap and commit exact lockfiles; this specification does not invent future patch numbers.
 
-Use a small application-owned coordinator loop behind a `ModelGateway` interface. `ScriptedModelGateway` drives deterministic application tests. An `AzureOpenAIModelGateway` supports real-model trials using the Azure OpenAI v1 Responses API and client-executed tools. The application executes and validates each operation; the model receives tool descriptions and observations. [Microsoft API guide](https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle).
+Use Microsoft Agent Framework as the core runtime. A run-scoped MAF Agent manages model/tool iteration with seven function tools and application policy middleware. ScriptedChatClient supports offline tests through the real framework; a MAF Responses client configured for Azure supplies live inference. Coordinator is only a lifecycle adapter. Domain services enforce validation, permissions, budgets and transactional acceptance. See [MAF contract](08-microsoft-agent-framework.md).
 
-The user explicitly selected Azure on November 8, 2026. The main runtime is an application-owned agent hosted on Azure, not a claim of using managed Agent Service. Stage 18 separately creates a versioned Foundry prompt agent with one read-only tool and compares execution boundaries; an Agent Framework variation is optional. See [Azure architecture](06-azure-architecture.md) and [the managed-agent lab](07-foundry-agent-lab.md).
+Azure is required. Stage 18 separately compares the main application-hosted MAF agent with a managed Foundry prompt agent using one read-only tool. See [Azure architecture](06-azure-architecture.md) and [managed-agent lab](07-foundry-agent-lab.md).
 
 ## One contained screen
 
@@ -96,3 +96,7 @@ Required additional evidence includes Azure workload identity/model access, dura
 - **Broad autonomous/multi-agent platform:** additional authority, coordination, and evaluation burden with little benefit to this project's task. Outside scope.
 
 The user selected the single-screen experience, a complete Copilot handoff, and now an Azure-hosted prototype with Azure agent learning. Stack, limits, controlled templates, and serial execution are explicit recommendations in this draft, not claims that the user previously selected every technical detail.
+
+## Required Microsoft Agent Framework
+
+The main agent uses MAF for model/tool orchestration from Stage 01, with a scripted framework client before Azure access. Application services enforce permissions, budgets, validation and approval. Begin with Stage 00 orientation. See [MAF runtime contract](08-microsoft-agent-framework.md).

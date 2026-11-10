@@ -55,13 +55,14 @@ def main() -> int:
                  '.env.example', 'docs/03-build-plan.md', 'learning/stages.json',
                  'evals/dev/scenarios.jsonl', 'evals/cloud/scenarios.jsonl',
                  'docs/06-azure-architecture.md', 'docs/07-foundry-agent-lab.md',
+                 'docs/08-microsoft-agent-framework.md',
                  'uplisted-interview.code-workspace']:
         checks.append((path, (ROOT / path).is_file(), 'file present' if (ROOT / path).is_file() else 'missing file'))
     try:
         stages = json.loads((ROOT / 'learning/stages.json').read_text())['stages']
-        valid = len(stages) == 19 and [s['stage'] for s in stages] == [f'{n:02}' for n in range(1, 20)]
+        valid = len(stages) == 20 and [s['stage'] for s in stages] == [f'{n:02}' for n in range(0, 20)]
         valid = valid and all((ROOT / row[key]).is_file() for row in stages for key in ('section', 'prompt', 'checkpoint'))
-        checks.append(('learning map', valid, '19 ordered stages with existing sections/prompts/checkpoints'))
+        checks.append(('learning map', valid, '20 ordered stages (00–19) with existing sections/prompts/checkpoints'))
     except (OSError, ValueError, KeyError, TypeError):
         checks.append(('learning map', False, 'invalid or unreadable stage mapping'))
     app = Path('/Applications/Visual Studio Code.app')
@@ -97,7 +98,7 @@ def main() -> int:
                   '- Azure tenant/subscription/model/permissions/budget/reviewer inputs are not configured; see AZURE-OWNER-SETUP.md.',
                   '- No Azure resource was created or deployed by this instruction update.',
                   '- No model/RentCast credentials were read or configured, and no paid provider was invoked.',
-                  '- All 19 application stages remain not started until Copilot implements and verifies them.', '',
+                  '- Stage 00 and all 19 implementation stages remain not started until Copilot implements and verifies them.', '',
                   'Rerun local checks: `./scripts/with-tools.sh python scripts/doctor.py`. Require Azure CLI too: add `--azure`.', '']
         (ROOT / 'docs/SETUP-STATUS.md').write_text('\n'.join(lines))
     return 0 if passed else 1

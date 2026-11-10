@@ -1,10 +1,6 @@
-# Copilot prompt: Stage 19 — Clean-checkout verification and rehearsal
+# Copilot stage 19
 
-Implement only Stage 19. Read `.github/copilot-instructions.md`, `docs/BUILD-PROGRESS.md`, the product brief, relevant canonical contracts/evaluation rules, and Azure architecture `docs/06-azure-architecture.md`. Inspect actual code and check results before editing. Use PostgreSQL and the Azure model/deployment architecture specified in the current documents.
-
-Start by listing the contracts and files this stage touches. If a prerequisite is incomplete, report the exact missing interface/check and repair it before dependent implementation. Use the existing design. Do not create billable resources until the relevant cloud stage has the owner-supplied scope/limits; do not ask again for authorization already supplied for that scope.
-
-The stage specification follows verbatim:
+Read COPILOT-START.md, AGENTS.md, docs/08-microsoft-agent-framework.md and the mapped learning section/checkpoint first. Execute only this stage. Teach concepts before asking one optional understanding question at a time. Record actual results and stop.
 
 ## Stage 19 — Clean-checkout verification and rehearsal
 
@@ -25,7 +21,3 @@ The stage specification follows verbatim:
 **Gate:** clean-checkout commands reproduce the documented outcome, critical checks pass, and the ten-minute talk can be delivered without relying on Copilot to explain the code. Azure deployment and the managed-agent lab must have actual evidence; neither is replaced by the offline backup. Code exists only after implementation; this handoff itself does not satisfy the gate.
 
 **Interview focus:** Show ownership of the design and evidence, including limitations. Framework names and code volume are secondary.
-
-At completion, report changed files, actual commands/results, unrun checks, what the tests prove, unresolved issues, and the interview lesson. Update `docs/BUILD-PROGRESS.md`, inspect the diff, and prepare a scoped checkpoint after verification. Do not push, deploy unrelated resources, or start another stage.
-
-Learning checkpoint: read `learning/sections/08-ownership.md` before implementation. Fill `learning/checkpoints/19.md` with real code/test evidence, explain one path and test, ask two short questions, and stop. Use `./scripts/with-tools.sh` for terminal commands. Track learning separately from implementation.

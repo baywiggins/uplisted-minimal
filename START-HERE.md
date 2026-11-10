@@ -8,13 +8,13 @@ A single-screen rental-listing assistant: ask for a task, inspect its evidence a
 
 **Interview thesis:** “I built a constrained agent and evaluated whether it accomplished the user's task without exceeding its authority. I separated model judgment from deterministic validation, recorded failures, and tested the controls that protect state and evidence.”
 
-The required target is now Azure: Python/FastAPI/Pydantic with PostgreSQL locally and in Azure, React/TypeScript/Vite, an explicit seven-tool coordinator, Azure OpenAI model access through Microsoft Foundry, and a real authenticated Container Apps deployment. Entra ID, managed identity, Key Vault, telemetry and cost/cleanup are part of the build. Stage 18 adds actual Foundry Agent Service experience separately from the main coordinator. Copilot remains the coding assistant, not the runtime agent.
+The required target is now Azure: Python/FastAPI/Pydantic with PostgreSQL locally and in Azure, React/TypeScript/Vite, a Microsoft Agent Framework agent with seven policy-wrapped tools, Azure OpenAI model access through Microsoft Foundry, and a real authenticated Container Apps deployment. Entra ID, managed identity, Key Vault, telemetry and cost/cleanup are part of the build. Stage 18 adds actual Foundry Agent Service experience separately from the main coordinator. Copilot remains the coding assistant, not the runtime agent.
 
 ## This folder is ready
 
-The copy/setup step has already been done. Open `uplisted-interview.code-workspace` in VS Code and prompt Copilot: **Read COPILOT-START.md and begin Stage 01.** It should implement one stage, run checks, explain the result, and stop for your learning checkpoint. You do not need to paste each document or copy the individual stage prompts.
+The copy/setup step has already been done. Open `uplisted-interview.code-workspace` in VS Code and prompt Copilot: **Read COPILOT-START.md and begin Stage 00.** It should teach Stage 00, run its prerequisite check and stop at the learning checkpoint. Stage 01 starts implementation after you continue. You do not need to paste each document or copy the individual stage prompts.
 
-Use [README.md](README.md) for the short entry point and [the eight-section learning map](learning/README.md) to understand the implementation. Later, “Continue” authorizes only the next numbered stage. The 19 stage prompts remain available for detailed reference.
+Use [README.md](README.md) for the short entry point and [the eight-section learning map](learning/README.md) to understand the implementation. Later, “Continue” authorizes only the next numbered stage. The 20 stage prompts (00–19) remain available for detailed reference.
 
 
 GitHub supports repository-wide guidance in `.github/copilot-instructions.md`, with availability varying by surface. Explicitly include the relevant stage and specification in context rather than assuming automatic discovery. [GitHub documentation](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions).
@@ -41,6 +41,7 @@ When documents appear inconsistent: product goals come from 01; names, limits, i
 
 | Stage | Deliverable |
 |---|---|
+| [00](prompts/00-start.md) | Orientation and MAF mental model |
 | [01](prompts/01-bootable-project-and-reproducible-commands.md) | Bootable project and reproducible commands |
 | [02](prompts/02-typed-facts-provenance-and-artifact-contracts.md) | Typed facts, provenance, and artifact contracts |
 | [03](prompts/03-versioned-state-concurrency-and-idempotency.md) | Versioned state, concurrency, and idempotency |
@@ -68,3 +69,7 @@ There is no calendar deadline built into the plan. Advance by evidence, not by e
 Ask it to summarize the relevant contracts, implement only the current stage, run the named checks, and provide changed files, actual commands/results, unresolved issues, and one interview lesson. Require a checkpoint commit only after reviewing passing output. Never let it turn a failing assertion into a passing one by weakening the requirement, hide a live-provider failure behind a fixture, or populate a benchmark table with invented values.
 
 This pack reduces ambiguity. It does not guarantee correct generated code; the acceptance gates and your review remain necessary.
+
+## Required Microsoft Agent Framework
+
+The main agent uses MAF for model/tool orchestration from Stage 01, with a scripted framework client before Azure access. Application services enforce permissions, budgets, validation and approval. Begin with Stage 00 orientation. See [MAF runtime contract](docs/08-microsoft-agent-framework.md).

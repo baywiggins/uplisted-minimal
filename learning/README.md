@@ -19,14 +19,14 @@ You do not need to absorb the entire specification at once. Read the current sec
 2. Implement only the current numbered stage.
 3. Run the relevant checks and show actual results.
 4. Walk through one real code/data flow and one meaningful test.
-5. Fill the matching checkpoint in `learning/checkpoints/` and ask two short questions.
+5. Fill the matching checkpoint in `learning/checkpoints/` and teach a concrete example, then ask one optional question at a time.
 6. Stop so you can understand, review, or request a correction.
 
 Implementation and learning are separate statuses. A working feature does not mean you understand it yet; asking to continue does not mean you answered the teach-back questions. This tracking is for you, not a grading ceremony.
 
 ## Simple prompts you can use
 
-- `Start Stage 01 using COPILOT-START.md.`
+- `Start Stage 00 using COPILOT-START.md.`
 - `Explain the current stage more simply, using one concrete example from the code.`
 - `Walk me through the request from the UI to the database and back.`
 - `Show the test that catches the most important failure in this stage.`
@@ -35,3 +35,7 @@ Implementation and learning are separate statuses. A working feature does not me
 - `I want to skip the teach-back questions and continue one stage.`
 
 The machine-readable stage-to-section/prompt/checkpoint mapping is [stages.json](stages.json). Technical requirements remain authoritative in [the contracts](../docs/02-contracts.md); learning pages explain them and do not introduce new behavior.
+
+## Required Microsoft Agent Framework
+
+The main agent uses MAF for model/tool orchestration from Stage 01, with a scripted framework client before Azure access. Application services enforce permissions, budgets, validation and approval. Begin with Stage 00 orientation. See [MAF runtime contract](../docs/08-microsoft-agent-framework.md).

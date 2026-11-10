@@ -4,11 +4,13 @@ This folder is prepared for an Azure-targeted prototype. The earlier plan was lo
 
 Paste this one prompt:
 
-> Read COPILOT-START.md and begin Stage 01. Implement only that stage, run its checks, then explain the implementation and stop at its learning checkpoint.
+> Read COPILOT-START.md and begin Stage 00. Teach me the architecture, run its prerequisite check, then explain the concepts and stop at its learning checkpoint.
 
 Copilot should start implementing, not ask you to copy files or redesign the project. All application stages are still unimplemented. This folder provides the specification, tooling preparation, fixtures, and learning structure.
 
-## Learn in eight sections
+## Begin with orientation, then learn in eight sections
+
+[Stage 00: Orientation](learning/sections/00-orientation.md) teaches the architecture before any code is written. [Microsoft Agent Framework](docs/08-microsoft-agent-framework.md) is the required core runtime from Stage 01.
 
 | Section | Stages | What you will understand |
 |---|---|---|
@@ -29,7 +31,7 @@ Each stage has a copy-ready implementation prompt and its own learning checkpoin
 - [Build progress](docs/BUILD-PROGRESS.md): actual implementation and verification status.
 - [Project brief](docs/01-product-brief.md): the single-screen product and interview goals.
 - [Contracts](docs/02-contracts.md): exact interfaces, authority, state, and limits.
-- [Build plan](docs/03-build-plan.md): all 19 stages and their checks.
+- [Build plan](docs/03-build-plan.md): Stage 00 plus 19 implementation stages and their checks.
 - [Evaluation plan](docs/04-evaluation-plan.md): 30 development scenarios plus 10 separate Azure checks, metrics, graders, and holdout rules.
 - [Azure architecture](docs/06-azure-architecture.md): required cloud resources, deployment, identity, telemetry and cleanup.
 - [Azure owner setup](docs/AZURE-OWNER-SETUP.md): inputs needed before provisioning or paid calls.
@@ -39,7 +41,7 @@ Each stage has a copy-ready implementation prompt and its own learning checkpoin
 
 ## Tooling already prepared
 
-The existing Git/VS Code/Copilot/uv/Node 24/Python 3.12 setup remains prepared. Stage 01 verifies Docker/Compose for local PostgreSQL. Azure CLI, subscription access, model availability, tenant/reviewer and spend choices are checked before Stage 13; they are not assumed configured. Application dependencies/lockfiles remain Copilot work. No Azure resources or paid calls are needed to start Stage 01.
+The existing Git/VS Code/Copilot/uv/Node 24/Python 3.12 setup remains prepared. Stage 01 verifies Docker/Compose for local PostgreSQL. Azure CLI, subscription access, model availability, tenant/reviewer and spend choices are checked before Stage 13; they are not assumed configured. Application dependencies/lockfiles remain Copilot work. No Azure resources or paid calls are needed to start Stage 00.
 
 Use `./scripts/with-tools.sh COMMAND ...` for terminal commands. It selects the prepared runtimes without changing global Node/Python settings. Example: `./scripts/with-tools.sh python scripts/doctor.py`. VS Code terminals also have a project PATH hint, but the wrapper is reliable across separate agent terminal calls.
 
@@ -52,3 +54,7 @@ Copilot should append the application's verified install/run/test commands below
 ## Application commands
 
 Not implemented yet. Stage 01 will add verified commands here.
+
+## Required Microsoft Agent Framework
+
+The main agent uses MAF for model/tool orchestration from Stage 01, with a scripted framework client before Azure access. Application services enforce permissions, budgets, validation and approval. Begin with Stage 00 orientation. See [MAF runtime contract](docs/08-microsoft-agent-framework.md).

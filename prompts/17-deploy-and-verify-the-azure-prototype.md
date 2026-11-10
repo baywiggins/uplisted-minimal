@@ -1,10 +1,6 @@
-# Copilot prompt: Stage 17 — Deploy and verify the Azure prototype
+# Copilot stage 17
 
-Implement only Stage 17. Read `.github/copilot-instructions.md`, `docs/BUILD-PROGRESS.md`, the product brief, relevant canonical contracts/evaluation rules, and Azure architecture `docs/06-azure-architecture.md`. Inspect actual code and check results before editing. Use PostgreSQL and the Azure model/deployment architecture specified in the current documents.
-
-Start by listing the contracts and files this stage touches. If a prerequisite is incomplete, report the exact missing interface/check and repair it before dependent implementation. Use the existing design. Do not create billable resources until the relevant cloud stage has the owner-supplied scope/limits; do not ask again for authorization already supplied for that scope.
-
-The stage specification follows verbatim:
+Read COPILOT-START.md, AGENTS.md, docs/08-microsoft-agent-framework.md and the mapped learning section/checkpoint first. Execute only this stage. Teach concepts before asking one optional understanding question at a time. Record actual results and stop.
 
 ## Stage 17 — Deploy and verify the Azure prototype
 
@@ -24,7 +20,3 @@ The stage specification follows verbatim:
 **Gate:** all required cloud acceptance checks in docs06 are backed by actual Azure observations; cloud failures stay distinct from offline/model-quality failures. An absent Azure account/permission leaves this stage incomplete rather than changing the target back to local.
 
 **Interview focus:** Demonstrate a real deployment, an actual identity boundary, state surviving infrastructure changes, and evidence of behavior under failure.
-
-At completion, report changed files, actual commands/results, unrun checks, what the tests prove, unresolved issues, and the interview lesson. Update `docs/BUILD-PROGRESS.md`, inspect the diff, and prepare a scoped checkpoint after verification. Do not push, deploy unrelated resources, or start another stage.
-
-Learning checkpoint: read `learning/sections/06-azure-deployment.md` before implementation. Fill `learning/checkpoints/17.md` with real code/test evidence, explain one path and test, ask two short questions, and stop. Use `./scripts/with-tools.sh` for terminal commands. Track learning separately from implementation.

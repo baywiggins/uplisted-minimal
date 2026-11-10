@@ -4,7 +4,7 @@ Updated November 8, 2026. **Azure is a required target for this prototype.** The
 
 ## What you will build and learn
 
-The main application is a custom agent hosted on Azure. FastAPI owns the coordinator, typed tools, budgets, transactions, and human approval. It calls an Azure OpenAI model deployed through Microsoft Foundry. Separately, Stage 18 creates a small Foundry Agent Service prompt agent so you can compare a managed agent with your application-owned loop. Do not describe ordinary model inference as Agent Service usage.
+The main application uses Microsoft Agent Framework hosted in FastAPI on Azure Container Apps. MAF owns model/tool orchestration; application services own budgets, permissions, transactions and human approval. Stage 18 compares it with a managed Foundry Agent Service prompt agent. Follow [the MAF contract](08-microsoft-agent-framework.md).
 
 Keep the same one-screen interface and seven domain tools. Azure changes identity, hosting, persistence, model access, telemetry, and operational tests; it does not grant the model extra authority.
 
@@ -28,7 +28,7 @@ This is a small development deployment, not a claim of production certification.
 flowchart LR
     U[Browser: one workspace] --> E[Entra sign-in / Container Apps authentication]
     E --> A[Container App: frontend + FastAPI]
-    A --> C[Application coordinator and seven tools]
+    A --> C[MAF Agent and seven policy-wrapped tools]
     C --> F[Azure OpenAI model in Foundry]
     C --> R[RentCast, optional live]
     C --> P[(Private PostgreSQL: facts, artifacts, leases, approval)]
@@ -47,15 +47,15 @@ Stage 13 may provision only the Foundry/model resources needed for Azure inferen
 
 The owner supplies subscription, tenant, resource group, allowed regions, model deployment choice/quota, permitted reviewer identity, cost limits, and expiry in [AZURE-OWNER-SETUP.md](AZURE-OWNER-SETUP.md). Resolve versions and availability from the current subscription and official docs; do not invent model/SKU availability or a monthly price. Missing cloud access does not block local stages, but it does leave the Azure milestone incomplete.
 
-This revision authorizes changing instructions, not creating billable resources now. When the owner later asks Copilot to execute a cloud stage, use the supplied scope and limits; do not ask for the same authorization repeatedly. If required account/permission/budget choices are missing, present the concrete prepared deployment and ask for only those missing choices. A generic “start” still executes Stage 01 only.
+This revision authorizes changing instructions, not creating billable resources now. When the owner later asks Copilot to execute a cloud stage, use the supplied scope and limits; do not ask for the same authorization repeatedly. If required account/permission/budget choices are missing, present the concrete prepared deployment and ask for only those missing choices. A generic “start” executes the first incomplete stage, beginning with Stage 00.
 
 ## Model API and endpoint contract
 
-Implement `AzureOpenAIModelGateway` in `providers/azure_openai_gateway.py` with `openai` and `azure-identity`. `AZURE_OPENAI_ENDPOINT` is the resource root; normalize and append `/openai/v1/` exactly once. Use the standard async OpenAI client for async application IO, a currently supported Responses-capable Azure deployment, and the GA v1 Azure endpoint: `https://<resource>.openai.azure.com/openai/v1/`. `model` is the deployment name. Current Microsoft v1 examples use Entra audience `https://ai.azure.com/.default`; do not combine a project endpoint or an old dated API recipe with this adapter. Verify the installed SDK's async token-provider API before implementation. [Microsoft v1 API guide](https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle).
+Implement `build_live_client` in `providers/azure_openai_gateway.py` using the installed MAF Responses provider and azure-identity. Current Python documentation uses `agent_framework.openai.OpenAIChatClient`; configure explicit Azure routing and the actual Azure deployment name as model. For a full `/openai/v1/` URL use base_url, not azure_endpoint. Verify token audience, async credential support and API-surface configuration against the pinned provider version. Do not build a parallel direct-SDK orchestration loop. Keep retries disabled, hosted tools unregistered, and cloud identities explicit. [Current Microsoft Python provider guide](https://learn.microsoft.com/en-us/agent-framework/integrations/by-component/model-providers/openai).
 
 Use local Azure CLI credentials for authorized development, an explicit user-assigned managed identity in Azure, and resource-scoped `Cognitive Services OpenAI User` for direct inference. For a registry configured without repository-ABAC, use scoped `AcrPull`; use `Key Vault Secrets User` at the intended vault/secret scope. If registry authorization mode differs, verify the corresponding repository-read role rather than granting broad Contributor. Provisioning privileges are separate from inference privileges. Do not ship Azure API keys or allow a production credential chain to fall back to a developer's cached identity. Keep retries disabled and account for each request. [Identity and RBAC](https://learn.microsoft.com/en-us/azure/foundry/concepts/authentication-authorization-foundry).
 
-Keep per-run ProviderProtocolState separate from public messages and use it to preserve tool-call IDs and Responses `function_call` / `function_call_output` semantics. Retain provider-returned continuation items required by the chosen model, including opaque reasoning items when needed for the protocol, without displaying or exporting private reasoning. Use application-managed conversation and `store=false` where supported; verify that choice for the deployed model. Do not send seven Python implementations to Azure and assume Azure executes them. Validate tool proposals and outputs in the existing dispatcher. Structured helper output remains subject to independent domain checks.
+Keep per-run MAF session/provider continuation separate from public messages and use it to preserve tool-call IDs and Responses `function_call` / `function_call_output` semantics. Retain provider-returned continuation items required by the chosen model, including opaque reasoning items when needed for the protocol, without displaying or exporting private reasoning. Use application-managed conversation and `store=false` where supported; verify that choice for the deployed model. Do not send seven Python implementations to Azure and assume Azure executes them. Validate tool proposals and outputs in the existing dispatcher. Structured helper output remains subject to independent domain checks.
 
 Record deployment name, model/version, endpoint class, SDK version, region, model capabilities, request settings, and prompt hash in the evaluation manifest. Re-run capability smoke tests if any changes. Do not use deprecated/classic SDK tutorials as a new starting point; current Microsoft docs distinguish direct model, project, and managed-agent SDK paths. [SDK selection guide](https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/sdk-overview).
 

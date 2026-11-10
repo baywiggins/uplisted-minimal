@@ -9,7 +9,7 @@ The model chooses among seven tools; the server controls their effects. Coordina
 ## How the stages build on each other
 
 - 09: Centralize the allowlist, permissions, validation, and event recording.
-- 10: Add the decision loop, shared budgets, cancellation, and fair workflow baseline.
+- 10: Integrate the MAF decision loop, shared budgets, cancellation, and fair workflow baseline.
 - 11: Connect the screen to real backend state and keep human approval separate.
 
 | Stage | Copy-ready implementation prompt | Record your understanding |

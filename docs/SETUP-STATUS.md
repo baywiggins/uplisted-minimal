@@ -1,6 +1,6 @@
 # Prepared folder: setup verification
 
-Checked at 2026-11-09T01:52:25.771399+00:00.
+Checked at 2026-11-10T03:26:03.913334+00:00.
 
 These checks cover the prepared folder and local prerequisites, not the application or model performance.
 
@@ -24,10 +24,11 @@ These checks cover the prepared folder and local prerequisites, not the applicat
 | evals/cloud/scenarios.jsonl | PASS | file present |
 | docs/06-azure-architecture.md | PASS | file present |
 | docs/07-foundry-agent-lab.md | PASS | file present |
+| docs/08-microsoft-agent-framework.md | PASS | file present |
 | uplisted-interview.code-workspace | PASS | file present |
-| learning map | PASS | 19 ordered stages with existing sections/prompts/checkpoints |
+| learning map | PASS | 20 ordered stages (00–19) with existing sections/prompts/checkpoints |
 | VS Code | PASS | installed |
-| Copilot extension | PASS | installed; account sign-in not checked |
+| Copilot extension | FAIL | not detected |
 
 ## Scope
 
@@ -36,10 +37,10 @@ These checks cover the prepared folder and local prerequisites, not the applicat
 - Copilot account sign-in and VS Code workspace trust remain editor-controlled; no account or approval setting was changed.
 - Application dependencies, source code, lockfiles, database/image setup and tests are left to Copilot Stage 01 onward.
 - Docker/Compose version checks do not prove the daemon is running or a PostgreSQL image has been pulled.
-- Azure CLI: not installed; required before Stage 13.
+- Azure CLI: available; account not checked.
 - Azure tenant/subscription/model/permissions/budget/reviewer inputs are not configured; see AZURE-OWNER-SETUP.md.
 - No Azure resource was created or deployed by this instruction update.
 - No model/RentCast credentials were read or configured, and no paid provider was invoked.
-- All 19 application stages remain not started until Copilot implements and verifies them.
+- Stage 00 and all 19 implementation stages remain not started until Copilot implements and verifies them.
 
 Rerun local checks: `./scripts/with-tools.sh python scripts/doctor.py`. Require Azure CLI too: add `--azure`.

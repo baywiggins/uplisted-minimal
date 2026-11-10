@@ -1,34 +1,19 @@
-# Start the prepared Uplisted project
+# Start Uplisted with Microsoft Agent Framework
 
-The user has authorized you to start implementing this project's existing specification. The folder is prepared; do not ask the user to create a folder, copy files, choose the architecture again, or paste all the documents. Begin the first incomplete stage after checking actual progress; on a fresh checkout this is Stage 01.
+Read AGENTS.md, .github/copilot-instructions.md, docs/BUILD-PROGRESS.md and learning/stages.json. Begin the first incomplete stage. The reset project starts at **Stage 00**, orientation; Stage 01 begins implementation only after the learner continues.
 
-## Read only what you need first
+Read docs/01-product-brief.md, docs/08-microsoft-agent-framework.md, the current stage from docs/03-build-plan.md, its prompt, learning section and checkpoint. Read applicable contracts/evaluation sections before coding; docs/06 covers Azure and docs/07 the managed-service lab.
 
-1. `AGENTS.md` and `.github/copilot-instructions.md`.
-2. `docs/BUILD-PROGRESS.md` and `learning/stages.json`.
-3. `docs/01-product-brief.md`; the relevant sections of `docs/02-contracts.md` and `docs/04-evaluation-plan.md`.
-4. The current stage's prompt and learning section from the stage mapping.
+The core runtime is Microsoft Agent Framework for both scripted tests and live Azure runs. Keep one MAF agent, seven tools, serial execution, one screen, typed validation, immutable state and human-only exact-version approval. Do not substitute a custom model/tool loop. The separate Foundry lab does not replace MAF.
 
-Also read `docs/06-azure-architecture.md` before architecture decisions, and `docs/07-foundry-agent-lab.md` for Stage 18. Azure is required, not a future extension. The canonical stage text is in `docs/03-build-plan.md`; each matching file in `prompts/` contains the same instructions. Implementation decisions are already documented. Resolve routine details yourself within those contracts. Ask only when a concrete conflict cannot be resolved from them.
+## Teach before asking
 
-## Start work, do not stop at orientation
+Assume no prior agent/Azure knowledge. Explain each concept in plain language, show a concrete Uplisted example, then connect it to actual code when available. Ask one short optional question at a time, only after teaching the concept. If the learner does not know, explain and work through it; never demand independent study. Recommend defaults already specified instead of asking the learner to make unfamiliar architecture choices. Ask only for genuinely missing requirements, preferences or account values when needed.
 
-Briefly explain this stage's purpose, what currently exists, and what you will add. Run `./scripts/with-tools.sh python scripts/doctor.py`. The prepared Node/Python tools are local to this project; do not upgrade or replace global runtimes. Run stage commands through `./scripts/with-tools.sh` so each terminal call uses the correct PATH.
+## Execute one stage
 
-Implement Stage 01 now if nothing is implemented. Preserve the ready-folder README's learning links when adding actual run/build commands. Do not overwrite the prepared workspace/tooling or mark later features implemented. Install only dependencies needed for the current stage, then pin them in the planned lockfiles. Stage 01 prepares Docker Compose for PostgreSQL; Azure credentials are not needed until Stage 13. Do not create Azure resources while starting Stage 01.
+Run commands through `./scripts/with-tools.sh`. Stage 00 runs the doctor and teaches the architecture without scaffolding. Stage 01 pins MAF dependencies and proves a real offline framework tool round trip. Subsequent stages implement the documented product. Azure account/model/spend choices are needed at Stage 13, not orientation. Do not create resources or make paid calls at startup.
 
-## Finish with a learning checkpoint
+After each stage run its gate, record actual evidence in docs/BUILD-PROGRESS.md and its learning checkpoint, explain one real code path/test if code exists, and stop. Record implementation, verification and learning separately. “Continue” permits only the next stage. Explanation questions never advance stages. Respect skipped teach-back and never infer understanding from silence.
 
-Run the current stage's actual acceptance checks and report their results. Fix scoped failures without weakening requirements. Update `docs/BUILD-PROGRESS.md` and the matching `learning/checkpoints/NN.md` with:
-
-- What changed and why, in plain English.
-- One real code/data flow with verified source paths and symbols.
-- One meaningful test, its actual result, and the failure it detects.
-- Two short questions that help me explain the implementation myself.
-- One interview takeaway and one remaining limitation.
-
-Record learning as explained, not automatically understood. Stop after this single stage so I can inspect the work. Answer my questions before advancing. “Continue” means only the next numbered stage. If I explicitly skip the questions, respect that and record it.
-
-## Preserve the project boundaries
-
-One contained screen, one coordinator, seven tools, typed/domain validation, immutable state, exact-version human approval, no external publication, and fixture/scripted providers initially. The real-model milestone uses Azure OpenAI in Microsoft Foundry. Later stages implement Azure identity, infrastructure, deployment, telemetry and a separate Foundry Agent Service lab. Account/region/quota/budget inputs are documented in docs/AZURE-OWNER-SETUP.md; obtain missing values only when required. A passing scripted demo cannot establish model reliability. All result tables remain unfilled until actually measured.
+Preserve instructions, fixtures, prepared tools and workspace settings while scaffolding. All stage completion records were reset; previous implementation evidence does not apply to this build.
