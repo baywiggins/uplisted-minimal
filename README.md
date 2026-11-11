@@ -53,7 +53,25 @@ Copilot should append the application's verified install/run/test commands below
 
 ## Application commands
 
-Not implemented yet. Stage 01 will add verified commands here.
+Stage 01 verified these commands:
+
+```bash
+uv sync --locked
+npm --prefix web ci
+docker compose up -d db
+uv run pytest -q
+uv run ruff check .
+uv run mypy src
+npm --prefix web run check
+npm --prefix web run test
+npm --prefix web run build
+uv run uvicorn uplisted.api.app:create_app --factory --host 127.0.0.1 --port 8000
+npm --prefix web run dev -- --host 127.0.0.1 --port 5173
+```
+
+The backend and frontend run in separate terminals. The current backend exposes only
+`GET /api/health`; the frontend is one empty workspace route. Database migrations,
+demo setup, browser E2E tests, and evaluation commands are added in later stages.
 
 ## Required Microsoft Agent Framework
 
