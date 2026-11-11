@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:16.11-alpine
+    environment:
+      POSTGRES_DB: uplisted
+      POSTGRES_USER: uplisted_dev
+      POSTGRES_PASSWORD: local-demo-only
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U uplisted_dev -d uplisted"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

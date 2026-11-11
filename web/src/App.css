@@ -1,0 +1,24 @@
+.workspace {
+  min-height: 100svh;
+}
+
+.workspace__header {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.workspace__brand,
+.workspace__status {
+  margin: 0;
+}
+
+.workspace__brand {
+  color: var(--text-strong);
+  font-weight: 700;
+}
+
+.workspace__content {
+  padding: 72px 24px;
+}
